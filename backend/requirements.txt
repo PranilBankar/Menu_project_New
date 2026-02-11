@@ -30,6 +30,7 @@ scikit-learn==1.4.0
 # LLM Integration
 openai==1.10.0
 anthropic==0.8.1
+huggingface_hub==0.18.1
 
 # Utilities
 python-dotenv==1.0.0
