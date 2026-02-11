@@ -1,0 +1,7 @@
+# Top-level aggregator for project virtual environment
+# Installs backend dependencies (and can be expanded with other service deps)
+-r backend/requirements.txt
+
+# Additional top-level packages (optional)
+# huggingface_hub==0.18.1
+# python-dotenv==1.0.0
