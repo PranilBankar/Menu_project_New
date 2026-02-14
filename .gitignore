@@ -121,4 +121,4 @@ supabase.json
 supabase.yaml
 
 **/.env.example
-.venv/ //
+.venv/ 
