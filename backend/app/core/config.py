@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     LLM_MODEL: str = "gpt-4-turbo-preview"
     LLM_TEMPERATURE: float = 0.3
+    HUGGINGFACE_API_KEY: Optional[str] = None
+    LLM_PROVIDER: Optional[str] = None
     
     # Embeddings
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -59,6 +61,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 settings = Settings()

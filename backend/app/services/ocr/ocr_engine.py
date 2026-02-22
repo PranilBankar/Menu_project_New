@@ -21,9 +21,7 @@ class OCREngine:
         """Initialize PaddleOCR"""
         self.ocr = PaddleOCR(
             use_angle_cls=True,
-            lang='en',
-            use_gpu=False,  # Set to True if GPU available
-            show_log=False
+            lang='en'
         )
     
     def preprocess_image(self, image_path: str) -> np.ndarray:
@@ -82,7 +80,7 @@ class OCREngine:
                 img = cv2.imread(image_path)
             
             # Run OCR
-            result = self.ocr.ocr(img, cls=True)
+            result = self.ocr.ocr(img)
             
             # Parse results
             extracted_data = []
@@ -102,7 +100,7 @@ class OCREngine:
             return extracted_data
             
         except Exception as e:
-            raise Exception(f"OCR extraction failed: {str(e)}")
+            raise
     
     def clean_text(self, ocr_results: List[Dict]) -> List[Dict]:
         """
