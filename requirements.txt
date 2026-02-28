@@ -22,8 +22,8 @@ redis==5.0.1
 hiredis==2.3.2
 
 # ─── OCR & Image Processing ─────────────────────────────────
-paddleocr>=2.8.0
-paddlepaddle>=3.0.0
+paddleocr==2.7.0.3
+paddlepaddle==2.6.2
 opencv-python==4.6.0.66
 Pillow==10.2.0
 
