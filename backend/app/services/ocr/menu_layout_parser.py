@@ -26,6 +26,8 @@ ROW_TOLERANCE        = 10   # px: max Y-gap to group tokens into the same row
 COLUMN_GAP_THRESHOLD = 80   # px: horizontal gap that signals a new column header
 MIN_CONFIDENCE       = 0.60 # discard OCR tokens below this confidence
 MIN_ITEM_LEN         = 2    # minimum chars for a valid item name
+MAX_ITEM_NAME_LEN    = 60   # reject items with absurdly long names (it's a description)
+MAX_WORDS_IN_NAME    = 8    # reject items with too many words (likely description text)
 
 # Matches standalone price tokens: 150, ₹150, Rs.150, 150/-, 1,200 etc.
 _PRICE_RE = re.compile(
@@ -38,6 +40,15 @@ _NOISE_RE = re.compile(r'^\d{6,}$')   # 6+ digit numbers are not prices
 
 # Words/characters to discard even if they pass confidence check
 _GARBAGE_RE = re.compile(r'^[^\w\s₹]+$')   # purely punctuation/symbols
+
+# OCR garbage words: contain digits mixed with letters in nonsensical ways
+_GARBLED_WORD_RE = re.compile(r'\b(?:[a-zA-Z]{1,2}\d+|\d+[a-zA-Z]{1,2})\b')
+
+# Phrases that indicate a description/note, not a menu header
+_DESCRIPTION_CLUE_RE = re.compile(
+    r'\b(served|with|includes|and|or|per|only|please|note|\(|\)$)\b',
+    re.IGNORECASE
+)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -71,6 +82,42 @@ def _parse_price(token: str) -> Optional[float]:
 
 def _is_noise(text: str) -> bool:
     return bool(_GARBAGE_RE.match(text.strip())) or len(text.strip()) < 1
+
+
+def _is_garbled(name: str) -> bool:
+    """
+    Return True if the item name looks like OCR garbage or a description.
+    Heuristics:
+      - Too long (likely a description/subtitle)
+      - Too many words
+      - Contains garbled OCR tokens (e.g. 'wh2', 'Rc', 'wtSad')
+    """
+    if len(name) > MAX_ITEM_NAME_LEN:
+        return True
+    words = name.split()
+    if len(words) > MAX_WORDS_IN_NAME:
+        return True
+    # Count garbled OCR tokens — if more than 1, it's probably a description
+    garbled_hits = len(_GARBLED_WORD_RE.findall(name))
+    if garbled_hits > 1:
+        return True
+    return False
+
+
+def _is_valid_header(text: str) -> bool:
+    """
+    Heuristic: a real section header is short, doesn't start with lowercase
+    conjunctions, and doesn't look like a continuation of a description.
+    """
+    if len(text) > 50:
+        return False
+    if bool(_DESCRIPTION_CLUE_RE.search(text)):
+        return False
+    # Must start with an uppercase letter or digit
+    stripped = text.strip()
+    if stripped and not (stripped[0].isupper() or stripped[0].isdigit()):
+        return False
+    return True
 
 
 def _clean_name(name: str) -> str:
@@ -117,6 +164,7 @@ def _parse_row(row: List[Dict]) -> List[Tuple[str, float]]:
     """
     Scan one row left→right using price-as-boundary strategy.
     Returns a list of (item_name, price) pairs found in this row.
+    Garbled / overly long item names are discarded.
     """
     pairs: List[Tuple[str, float]] = []
     item_fragments: List[str] = []
@@ -130,7 +178,7 @@ def _parse_row(row: List[Dict]) -> List[Tuple[str, float]]:
         if price is not None:
             # Price token → close current item segment
             name = _clean_name(' '.join(item_fragments))
-            if len(name) >= MIN_ITEM_LEN:
+            if len(name) >= MIN_ITEM_LEN and not _is_garbled(name):
                 pairs.append((name, price))
             item_fragments = []
         else:
@@ -258,15 +306,16 @@ def parse_menu(ocr_result: List) -> List[Dict[str, Any]]:
                 # Strategy: for each detected header, find closest existing column
                 # and update it, or add a new one if gap is large.
                 for hdr_text, hdr_mid_x in headers:
+                    # Reject description fragments like "and pickle)"
+                    if not _is_valid_header(hdr_text):
+                        continue
                     # Find closest existing column
                     closest = min(column_categories,
                                   key=lambda c: abs(c[1] - hdr_mid_x))
                     if abs(closest[1] - hdr_mid_x) < COLUMN_GAP_THRESHOLD:
-                        # Update existing column in-place
                         idx = column_categories.index(closest)
                         column_categories[idx] = (hdr_text, hdr_mid_x)
                     else:
-                        # New column discovered
                         column_categories.append((hdr_text, hdr_mid_x))
 
     return menu_items
