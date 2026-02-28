@@ -59,7 +59,10 @@ class OCREngine:
         # Threshold to get binary image
         _, binary = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
-        return binary
+        # Convert back to 3-channel BGR — PaddleOCR expects a color image
+        result = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+        
+        return result
     
     def extract_text(self, image_path: str, preprocess: bool = True) -> List[Dict]:
         """

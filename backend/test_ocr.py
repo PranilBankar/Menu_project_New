@@ -10,30 +10,30 @@ sys.path.append(str(backend_dir))
 
 from app.services.ocr.ocr_engine import get_ocr_engine
 
-def create_dummy_menu():
-    # Create a white image
-    img = np.ones((500, 600, 3), dtype=np.uint8) * 255
+# def create_dummy_menu():
+#     # Create a white image
+#     img = np.ones((500, 600, 3), dtype=np.uint8) * 255
     
-    # Text to add
-    texts = [
-        ("Starters", (50, 50), 1.5),
-        ("Tomato Soup ........ Rs. 150", (50, 100), 1.0),
-        ("French Fries ....... 250 INR", (50, 150), 1.0),
-        ("Main Course", (50, 250), 1.5),
-        ("Grilled Chicken .... 350/-", (50, 300), 1.0),
-        ("Vegetable Pasta .... Rs. 300", (50, 350), 1.0),
-    ]
+#     # Text to add
+#     texts = [
+#         ("Starters", (50, 50), 1.5),
+#         ("Tomato Soup ........ Rs. 150", (50, 100), 1.0),
+#         ("French Fries ....... 250 INR", (50, 150), 1.0),
+#         ("Main Course", (50, 250), 1.5),
+#         ("Grilled Chicken .... 350/-", (50, 300), 1.0),
+#         ("Vegetable Pasta .... Rs. 300", (50, 350), 1.0),
+#     ]
     
-    for text, pos, scale in texts:
-        cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), 2)
+#     for text, pos, scale in texts:
+#         cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), 2)
         
-    image_path = str(backend_dir / "dummy_menu.jpg")
-    cv2.imwrite(image_path, img)
-    return image_path
+#     image_path = str(backend_dir / "dummy_menu.jpg")
+#     cv2.imwrite(image_path, img)
+#     return image_path
 
 def main():
     print("Creating dummy menu image...")
-    image_path = create_dummy_menu()
+    image_path =r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu1.jpeg"
     print(f"Saved dummy image at: {image_path}")
     
     print("\nInitializing OCR Engine...")
