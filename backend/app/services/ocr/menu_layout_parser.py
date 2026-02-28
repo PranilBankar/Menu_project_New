@@ -21,10 +21,11 @@ import re
 from typing import List, Dict, Any, Optional, Tuple
 
 # ── Tunables ──────────────────────────────────────────────────────────────────
-ROW_TOLERANCE   = 10    # px: max vertical gap to consider tokens on the same row
-                        # Tight on purpose — avoids merging adjacent rows
-MIN_CONFIDENCE  = 0.60  # discard OCR tokens below this confidence
-MIN_ITEM_LEN    = 2     # minimum chars for a valid item name
+ROW_TOLERANCE        = 10   # px: max Y-gap to group tokens into the same row
+                             # Tight on purpose — avoids merging adjacent rows
+COLUMN_GAP_THRESHOLD = 80   # px: horizontal gap that signals a new column header
+MIN_CONFIDENCE       = 0.60 # discard OCR tokens below this confidence
+MIN_ITEM_LEN         = 2    # minimum chars for a valid item name
 
 # Matches standalone price tokens: 150, ₹150, Rs.150, 150/-, 1,200 etc.
 _PRICE_RE = re.compile(
@@ -140,6 +141,45 @@ def _parse_row(row: List[Dict]) -> List[Tuple[str, float]]:
     return pairs
 
 
+def _split_header_row(row: List[Dict]) -> List[Tuple[str, float]]:
+    """
+    Within a header row (no prices), detect multiple column headers by
+    looking for large horizontal X-gaps between consecutive tokens.
+
+    Returns a list of (header_text, mid_x) tuples — one per detected column.
+    mid_x is the horizontal centre of the column header, used later to match
+    with items that fall under the same column.
+    """
+    groups: List[List[Dict]] = []
+    current_group: List[Dict] = []
+
+    for i, tok in enumerate(row):       # row is already sorted left→right
+        if not current_group:
+            current_group.append(tok)
+        else:
+            gap = tok['left_x'] - current_group[-1]['left_x']
+            if gap > COLUMN_GAP_THRESHOLD:
+                groups.append(current_group)
+                current_group = [tok]
+            else:
+                current_group.append(tok)
+
+    if current_group:
+        groups.append(current_group)
+
+    result = []
+    for grp in groups:
+        text = _clean_name(' '.join(t['text'] for t in grp if not _is_noise(t['text'])))
+        if len(text) >= MIN_ITEM_LEN and not re.match(r'^\d+$', text):
+            # mid_x = centre of this header group
+            min_x = min(t['left_x'] for t in grp)
+            max_x = max(t['left_x'] for t in grp)
+            mid_x = (min_x + max_x) / 2.0
+            result.append((text, mid_x))
+
+    return result
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def parse_menu(ocr_result: List) -> List[Dict[str, Any]]:
@@ -172,6 +212,7 @@ def parse_menu(ocr_result: List) -> List[Dict[str, Any]]:
             'conf':     conf,
             'centre_y': _centre_y(bbox),
             'left_x':   _left_x(bbox),
+            'right_x':  max(pt[0] for pt in bbox),
         })
 
     # ── Group into rows ───────────────────────────────────────────────────────
@@ -179,28 +220,53 @@ def parse_menu(ocr_result: List) -> List[Dict[str, Any]]:
 
     # ── Parse each row ────────────────────────────────────────────────────────
     menu_items: List[Dict[str, Any]] = []
-    current_category = "General"
+
+    # column_categories: list of (category_name, mid_x)
+    # We keep one per discovered column; items are assigned the category
+    # whose mid_x is closest to the item's left_x.
+    column_categories: List[Tuple[str, float]] = [("General", 0.0)]
+
+    def _category_for_x(x: float) -> str:
+        """Return the category whose mid_x is closest to x."""
+        return min(column_categories, key=lambda c: abs(c[1] - x))[0]
 
     for row in rows:
         pairs = _parse_row(row)
 
         if pairs:
-            # Row produced item-price pairs
+            # Row produced item-price pairs — assign each to nearest column
             for name, price in pairs:
+                # Use the left_x of the first token of the item (approx)
+                # We approximate by finding the token whose text starts the name
+                item_x = row[0]['left_x']  # simplification: leftmost token in row
+                # Better: find the token matching the beginning of the item name
+                for tok in row:
+                    if tok['text'].strip() and name.startswith(tok['text'].strip()[:4]):
+                        item_x = tok['left_x']
+                        break
+
                 menu_items.append({
-                    "category": current_category,
+                    "category": _category_for_x(item_x),
                     "item":     name,
                     "price":    price,
                 })
         else:
-            # No price found → treat as a section/category header
-            # Gather all non-noise text in the row as the category name
-            header = ' '.join(t['text'] for t in row if not _is_noise(t['text']))
-            header = _clean_name(header)
-            if len(header) >= MIN_ITEM_LEN:
-                # Only update category if the header looks like a real heading
-                # (not a standalone letter or digit)
-                if not re.match(r'^\d+$', header):
-                    current_category = header
+            # No price found → detect column headers (may be multiple per row)
+            headers = _split_header_row(row)
+            if headers:
+                # Merge into column_categories: update existing or add new columns
+                # Strategy: for each detected header, find closest existing column
+                # and update it, or add a new one if gap is large.
+                for hdr_text, hdr_mid_x in headers:
+                    # Find closest existing column
+                    closest = min(column_categories,
+                                  key=lambda c: abs(c[1] - hdr_mid_x))
+                    if abs(closest[1] - hdr_mid_x) < COLUMN_GAP_THRESHOLD:
+                        # Update existing column in-place
+                        idx = column_categories.index(closest)
+                        column_categories[idx] = (hdr_text, hdr_mid_x)
+                    else:
+                        # New column discovered
+                        column_categories.append((hdr_text, hdr_mid_x))
 
     return menu_items

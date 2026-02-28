@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 from app.services.ocr.menu_layout_parser import parse_menu
 
 # ── Config ────────────────────────────────────────────────────────────────────
-REAL_IMAGE  = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu1.jpeg"
-DUMMY_IMAGE = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\dummy_menu.jpg"
+REAL_IMAGE  = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu2.jpeg"
+#DUMMY_IMAGE = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\dummy_menu.jpg"
 
 # ── Dummy generator (fallback if real image missing) ─────────────────────────
 def create_dummy_image(path: str) -> str:
