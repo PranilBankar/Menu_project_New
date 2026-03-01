@@ -93,12 +93,14 @@ def run_pipeline():
     print("=" * 65)
 
     # Convert enriched items to the format embedding_service expects
-    # embedding_service needs: { "item": str, "category": str, "price": float }
     for_embedding = [
         {
-            "item":     e["item_name"],
-            "category": e["section_name"],
-            "price":    e["price"],
+            "item":        e["item_name"],
+            "category":   e["section_name"],
+            "price":      e["price"],
+            "is_veg":     e.get("is_veg"),
+            "calories":   e.get("calories"),
+            "description": e.get("description", ""),
         }
         for e in enriched
     ]

@@ -175,12 +175,20 @@ class EmbeddingService:
                 except (TypeError, ValueError):
                     price_int = None
 
+                # Safely cast calories to int
+                try:
+                    cal = item.get("calories")
+                    calories_int = int(cal) if cal is not None else None
+                except (TypeError, ValueError):
+                    calories_int = None
+
                 cur.execute(
                     """
                     INSERT INTO menu_items
-                        (id, restaurant_id, section_name, item_name, price, embedding)
+                        (id, restaurant_id, section_name, item_name, price,
+                         is_veg, calories, embedding)
                     VALUES
-                        (%s, %s, %s, %s, %s, %s)
+                        (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT DO NOTHING
                     """,
                     (
@@ -189,10 +197,13 @@ class EmbeddingService:
                         item.get("category", "General"),
                         item["item"],
                         price_int,
-                        vector,           # pgvector auto-converts np.ndarray
+                        item.get("is_veg"),       # bool or None
+                        calories_int,             # LLM-estimated kcal
+                        vector,
                     ),
                 )
                 inserted += 1
+
 
         conn.commit()
         logger.info(f"Upserted {inserted} menu items for restaurant {restaurant_id}.")

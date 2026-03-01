@@ -105,20 +105,33 @@ class MenuStructurer:
         )
         n = len(items[:60])
 
-        system_msg = "You are a restaurant menu expert. Return only valid JSON arrays, no extra text."
-        user_msg = f"""Enrich these {n} menu items from '{restaurant_name or 'a restaurant'}' with category and metadata.
+        system_msg = "You are a restaurant menu nutrition expert. Return only valid JSON arrays, no extra text."
+        user_msg = f"""You are given {n} menu items from an Indian restaurant called '{restaurant_name or 'a restaurant'}'.
 
-Items:
+Items (number. name - price):
 {item_lines}
 
-Return ONLY a JSON array with exactly {n} objects:
+For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
 [
-  {{"item_name": "cleaned name", "price": <number>, "section_name": "category", "is_veg": true/false, "calories": <int or null>, "description": "brief"}},
-  ...
+  {{
+    "item_name": "corrected item name (fix obvious OCR typos)",
+    "price": <number>,
+    "section_name": "one of: Biryani, Starters, Veg Mains, Non-Veg Mains, Breads, Rice, Beverages, Desserts, Snacks",
+    "is_veg": true or false,
+    "calories": <integer — MANDATORY, estimate based on typical Indian restaurant serving size>,
+    "description": "one-line description"
+  }}
 ]
 
-Categories: Biryani, Starters, Veg Mains, Non-Veg Mains, Breads, Rice, Beverages, Desserts, Snacks
-Rules: fix OCR typos, is_veg=false for chicken/mutton/fish/egg/prawn, return ONLY the JSON array."""
+STRICT RULES:
+1. "calories" MUST be an integer — never null. Estimate from typical Indian portions:
+   - Roti/Naan: 120-180 kcal, Dal: 200-350 kcal, Curry (veg): 250-400 kcal
+   - Chicken/Mutton curry: 350-500 kcal, Biryani: 450-650 kcal
+   - Mocktail/Juice/Lassi: 80-200 kcal, Tea/Coffee: 30-120 kcal
+   - Desserts: 200-450 kcal, Samosa/Snacks: 150-300 kcal
+2. is_veg = false for: chicken, mutton, fish, prawn, egg, keema, meat
+3. Return ONLY the JSON array, starting with '[' and ending with ']'"""
+
 
         # Try models in order — first available wins
         models_to_try = [
@@ -150,6 +163,9 @@ Rules: fix OCR typos, is_veg=false for chicken/mutton/fish/egg/prawn, return ONL
 
                 enriched = json.loads(match.group(0))
                 print(f"[LLM] SUCCESS: enriched {len(enriched)} items using {model_id}")
+                # Debug: show first 3 items to verify calories are populated
+                for dbg in enriched[:3]:
+                    print(f"  DEBUG sample → item='{dbg.get('item_name')}' | calories={dbg.get('calories')} | is_veg={dbg.get('is_veg')} | section={dbg.get('section_name')}")
 
                 if len(items) > 60:
                     enriched += self._enrich_with_rules(items[60:])
