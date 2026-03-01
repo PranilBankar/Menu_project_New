@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 RESTAURANT_ID   = "11986859-05ac-4e5e-846b-8ccbc7da0323"
 RESTAURANT_NAME = "Mac D"
-AREA_NAME       = "Nagpur"
+AREA_NAME       = "VR Mall"
 # ─────────────────────────────────────────────────────────────────────────────
 
 from app.services.nlp.rag_service import RAGService
