@@ -45,9 +45,10 @@ class RAGService:
     # ── Public API ─────────────────────────────────────────────────────────────
 
     def chat(self,
-             query:         str,
-             area_name:     str = "",
-             restaurant_id: Optional[str] = None) -> Dict[str, Any]:
+             query:           str,
+             area_name:       str = "",
+             restaurant_id:   Optional[str] = None,
+             restaurant_name: str = "") -> Dict[str, Any]:
         """
         Answer a natural language food query.
 
@@ -85,7 +86,9 @@ class RAGService:
             }
 
         soft_hints = {k: filters.get(k) for k in self.SOFT_FILTER_KEYS}
-        answer = self._generate_answer(query, items, area_name, soft_hints=soft_hints)
+        answer = self._generate_answer(query, items, area_name,
+                                       soft_hints=soft_hints,
+                                       restaurant_name=restaurant_name)
 
         return {
             "answer":       answer,
@@ -99,19 +102,21 @@ class RAGService:
                          query: str,
                          items: List[Dict[str, Any]],
                          area_name: str,
-                         soft_hints: Optional[Dict[str, Any]] = None) -> str:
+                         soft_hints: Optional[Dict[str, Any]] = None,
+                         restaurant_name: str = "") -> str:
         """Call Qwen to select best items and produce a natural language answer."""
 
         soft_hints = soft_hints or {}
 
-        # Format all candidate items
+        # Format all candidate items — include restaurant name on each line
+        rest_label = f" @ {restaurant_name}" if restaurant_name else ""
         item_lines = []
         for i, it in enumerate(items, 1):
             veg_tag = "Veg" if it.get("is_veg") else "Non-Veg"
             cal     = f"{it['calories']} kcal" if it.get("calories") else "?"
             hs      = f"health {it['health_score']}/10" if it.get("health_score") else ""
             item_lines.append(
-                f"{i}. {it['item_name']} — {it.get('section_name','?')} — "
+                f"{i}. {it['item_name']}{rest_label} — {it.get('section_name','?')} — "
                 f"₹{it['price']} — {veg_tag} — {cal} {hs}"
             )
         context = "\n".join(item_lines)

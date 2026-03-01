@@ -9,8 +9,9 @@ os.environ["FLAGS_use_mkldnn"]  = "0"
 sys.path.insert(0, os.path.dirname(__file__))
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-RESTAURANT_ID = "11986859-05ac-4e5e-846b-8ccbc7da0323"
-AREA_NAME     = "Nagpur"
+RESTAURANT_ID   = "11986859-05ac-4e5e-846b-8ccbc7da0323"
+RESTAURANT_NAME = "Mac D"
+AREA_NAME       = "Nagpur"
 # ─────────────────────────────────────────────────────────────────────────────
 
 from app.services.nlp.rag_service import RAGService
@@ -26,7 +27,7 @@ TEST_QUERIES = [
 
 
 def run():
-    rag = RAGService(top_k=5)
+    rag = RAGService()   # default top_k=15
     total, passed = 0, 0
 
     for query, expected_filters in TEST_QUERIES:
@@ -34,7 +35,9 @@ def run():
         print(f"  QUERY: \"{query}\"")
         print("=" * 65)
 
-        result = rag.chat(query, area_name=AREA_NAME, restaurant_id=RESTAURANT_ID)
+        result = rag.chat(query, area_name=AREA_NAME,
+                          restaurant_id=RESTAURANT_ID,
+                          restaurant_name=RESTAURANT_NAME)
 
         filters = result["filters_used"]
         items   = result["items"]
