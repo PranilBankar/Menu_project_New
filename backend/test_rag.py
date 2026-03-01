@@ -36,8 +36,7 @@ def run():
         print("=" * 65)
 
         result = rag.chat(query, area_name=AREA_NAME,
-                          restaurant_id=RESTAURANT_ID,
-                          restaurant_name=RESTAURANT_NAME)
+                          restaurant_id=RESTAURANT_ID)
 
         filters = result["filters_used"]
         items   = result["items"]

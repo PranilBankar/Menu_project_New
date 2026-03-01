@@ -16,10 +16,9 @@ router = APIRouter()
 # ── Request / Response schemas ────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    query:           str
-    area_name:       Optional[str] = ""
-    restaurant_id:   Optional[str] = None
-    restaurant_name: Optional[str] = ""  # included in LLM response
+    query:         str
+    area_name:     Optional[str] = ""     # user's location — searches all nearby restaurants
+    restaurant_id: Optional[str] = None   # optional: restrict to one restaurant
 
 
 class MenuItem(BaseModel):
@@ -59,7 +58,6 @@ async def chat(req: ChatRequest):
         query=req.query,
         area_name=req.area_name or "",
         restaurant_id=req.restaurant_id,
-        restaurant_name=req.restaurant_name or "",
     )
 
     return ChatResponse(**result)

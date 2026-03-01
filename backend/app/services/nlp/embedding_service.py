@@ -282,69 +282,80 @@ class EmbeddingService:
                       query: str,
                       filters: Dict[str, Any],
                       top_k: int = 8,
-                      restaurant_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+                      restaurant_ids: Optional[List[str]] = None,
+                      area_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Semantic search combined with SQL column filters in one query.
+        JOINs with restaurants + areas to support area-based multi-restaurant search.
 
         Args:
             query:          Natural language query (will be embedded)
-            filters:        Dict from QueryParser.parse() — keys:
-                              is_veg, max_price, min_price, max_calories,
-                              min_health_score, section_name
+            filters:        Dict from QueryParser.parse()
             top_k:          Max results to return
-            restaurant_ids: Restrict to these restaurants (None = all)
+            restaurant_ids: Restrict to specific restaurants (optional)
+            area_name:      Search across all restaurants in this area (optional)
 
         Returns:
-            List of dicts with item details + similarity score
+            List of dicts with item details + restaurant_name + similarity score
         """
         semantic_q = filters.get("semantic_query") or query
         query_vector = self.generate_embeddings([semantic_q])[0]
 
         # ── Build WHERE clauses dynamically ──────────────────────────────────
         where_clauses = []
-        params: list = [query_vector]   # first param is always for <=> distance
+        params: list = [query_vector]   # first param: for <=> distance in SELECT
 
+        # Area filter — searches ALL restaurants in the area
+        if area_name:
+            where_clauses.append("a.area_name ILIKE %s")
+            params.append(area_name)
+
+        # Specific restaurant filter (overrides area if both are given)
         if restaurant_ids:
-            where_clauses.append("restaurant_id = ANY(%s::uuid[])")
+            where_clauses.append("mi.restaurant_id = ANY(%s::uuid[])")
             params.append(restaurant_ids)
 
+        # Hard column filters
         if filters.get("is_veg") is not None:
-            where_clauses.append("is_veg = %s")
+            where_clauses.append("mi.is_veg = %s")
             params.append(filters["is_veg"])
 
         if filters.get("max_price") is not None:
-            where_clauses.append("price <= %s")
+            where_clauses.append("mi.price <= %s")
             params.append(filters["max_price"])
 
         if filters.get("min_price") is not None:
-            where_clauses.append("price >= %s")
+            where_clauses.append("mi.price >= %s")
             params.append(filters["min_price"])
 
         if filters.get("max_calories") is not None:
-            where_clauses.append("calories <= %s")
+            where_clauses.append("mi.calories <= %s")
             params.append(filters["max_calories"])
 
         if filters.get("min_health_score") is not None:
-            where_clauses.append("health_score >= %s")
+            where_clauses.append("mi.health_score >= %s")
             params.append(filters["min_health_score"])
 
         if filters.get("section_name"):
-            where_clauses.append("section_name = %s")
+            where_clauses.append("mi.section_name = %s")
             params.append(filters["section_name"])
 
         where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
-        # Second copy of vector for the ORDER BY clause
+        # Second copy of vector for ORDER BY
         params.append(query_vector)
         params.append(top_k)
 
         sql = f"""
-            SELECT id, restaurant_id, section_name, item_name, price,
-                   is_veg, calories, health_score,
-                   1 - (embedding <=> %s::vector) AS similarity
-            FROM   menu_items
+            SELECT mi.id, mi.restaurant_id, r.restaurant_name,
+                   mi.section_name, mi.item_name, mi.price,
+                   mi.is_veg, mi.calories, mi.health_score,
+                   1 - (mi.embedding <=> %s::vector) AS similarity
+            FROM   menu_items        mi
+            JOIN   restaurants       r  ON mi.restaurant_id = r.restaurant_id
+            LEFT JOIN areas          a  ON r.area_id        = a.area_id
             {where_sql}
-            ORDER  BY embedding <=> %s::vector
+            ORDER  BY mi.embedding <=> %s::vector
             LIMIT  %s
         """
 
@@ -355,21 +366,23 @@ class EmbeddingService:
 
         results = [
             {
-                "id":             str(row[0]),
-                "restaurant_id":  str(row[1]),
-                "section_name":   row[2],
-                "item_name":      row[3],
-                "price":          row[4],
-                "is_veg":         row[5],
-                "calories":       row[6],
-                "health_score":   row[7],
-                "similarity":     float(row[8]),
+                "id":              str(row[0]),
+                "restaurant_id":   str(row[1]),
+                "restaurant_name": row[2] or "Unknown",
+                "section_name":    row[3],
+                "item_name":       row[4],
+                "price":           row[5],
+                "is_veg":          row[6],
+                "calories":        row[7],
+                "health_score":    row[8],
+                "similarity":      float(row[9]),
             }
             for row in rows
         ]
 
-        logger.info(f"hybrid_search: '{query}' → {len(results)} results | filters={filters}")
+        logger.info(f"hybrid_search: '{query}' → {len(results)} results | area={area_name} | filters={filters}")
         return results
+
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────
