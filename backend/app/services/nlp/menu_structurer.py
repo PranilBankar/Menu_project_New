@@ -108,7 +108,7 @@ class MenuStructurer:
         system_msg = "You are a restaurant menu nutrition expert. Return only valid JSON arrays, no extra text."
         user_msg = f"""You are given {n} menu items from an Indian restaurant called '{restaurant_name or 'a restaurant'}'.
 
-Items (number. name - price):
+Items (number. name - price in rupees):
 {item_lines}
 
 For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
@@ -118,19 +118,30 @@ For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
     "price": <number>,
     "section_name": "one of: Biryani, Starters, Veg Mains, Non-Veg Mains, Breads, Rice, Beverages, Desserts, Snacks",
     "is_veg": true or false,
-    "calories": <integer — MANDATORY, estimate based on typical Indian restaurant serving size>,
+    "calories": <integer — MANDATORY estimate>,
+    "health_score": <integer 1-10 — MANDATORY>,
     "description": "one-line description"
   }}
 ]
 
 STRICT RULES:
-1. "calories" MUST be an integer — never null. Estimate from typical Indian portions:
-   - Roti/Naan: 120-180 kcal, Dal: 200-350 kcal, Curry (veg): 250-400 kcal
-   - Chicken/Mutton curry: 350-500 kcal, Biryani: 450-650 kcal
-   - Mocktail/Juice/Lassi: 80-200 kcal, Tea/Coffee: 30-120 kcal
-   - Desserts: 200-450 kcal, Samosa/Snacks: 150-300 kcal
-2. is_veg = false for: chicken, mutton, fish, prawn, egg, keema, meat
-3. Return ONLY the JSON array, starting with '[' and ending with ']'"""
+1. Use the PRICE as a quality/quantity signal when estimating calories and health_score:
+   - Low price (< ₹60): smaller portion or simpler ingredients → adjust calories down and health_score accordingly
+   - High price (> ₹300): larger portion or premium ingredients → adjust calories up
+2. "calories" MUST be an integer — never null. Typical Indian portions:
+   - Roti/Naan ₹20-50: 120-160 kcal | Dal ₹100-200: 250-350 kcal
+   - Veg curry ₹150-250: 280-400 kcal | Chicken/Mutton curry ₹250-400: 350-500 kcal
+   - Biryani ₹250-500: 450-650 kcal | Mocktail/Juice ₹80-150: 80-180 kcal
+   - Tea/Coffee ₹30-80: 30-100 kcal | Desserts ₹80-200: 200-400 kcal
+3. "health_score" MUST be an integer 1-10 (10 = most healthy):
+   - 8-10: Grilled/steamed items, plain rice/roti, dal, salads, coconut water
+   - 6-7: Veg curries, plain biryani, lassi, fresh juices
+   - 4-5: Paneer dishes, fried rice, naan, flavoured beverages
+   - 2-3: Deep fried snacks, heavy curries, mithai, biryanis with cream
+   - 1-2: Gulab jamun, jalebi, energy drinks, heavily processed items
+   - Lower price sometimes = lower quality oil/ingredients → reduce health_score by 1-2
+4. is_veg = false for: chicken, mutton, fish, prawn, egg, keema, meat, seafood
+5. Return ONLY the JSON array, starting with '[' and ending with ']'"""
 
 
         # Try models in order — first available wins
@@ -152,20 +163,45 @@ STRICT RULES:
                         {"role": "system", "content": system_msg},
                         {"role": "user",   "content": user_msg},
                     ],
-                    max_tokens=3000,
+                    max_tokens=5000,      # increased: more fields per item now
                     temperature=settings.LLM_TEMPERATURE,
                 )
                 generated = response.choices[0].message.content.strip()
 
-                match = re.search(r'\[.*\]', generated, re.DOTALL)
+                # Strip markdown code fences
+                generated = re.sub(r'^```(?:json)?\s*', '', generated, flags=re.MULTILINE)
+                generated = re.sub(r'```\s*$',          '', generated, flags=re.MULTILINE)
+
+                # Extract JSON array
+                match = re.search(r'(\[.*\])', generated, re.DOTALL)
                 if not match:
                     raise ValueError(f"No JSON array in response from {model_id}")
 
-                enriched = json.loads(match.group(0))
+                enriched = json.loads(match.group(1))
+
+                # Normalise key names — different models use different conventions
+                _KEY_MAP = {
+                    "vegetarian":    "is_veg",
+                    "is_vegetarian": "is_veg",
+                    "veg":           "is_veg",
+                    "calorie":       "calories",
+                    "calorie_count": "calories",
+                    "kcal":          "calories",
+                    "score":         "health_score",
+                    "healthscore":   "health_score",
+                    "health":        "health_score",
+                    "name":          "item_name",
+                    "category":      "section_name",
+                    "section":       "section_name",
+                }
+                enriched = [
+                    {_KEY_MAP.get(k.lower().replace(" ", "_"), k): v for k, v in obj.items()}
+                    for obj in enriched
+                ]
+
                 print(f"[LLM] SUCCESS: enriched {len(enriched)} items using {model_id}")
-                # Debug: show first 3 items to verify calories are populated
                 for dbg in enriched[:3]:
-                    print(f"  DEBUG sample → item='{dbg.get('item_name')}' | calories={dbg.get('calories')} | is_veg={dbg.get('is_veg')} | section={dbg.get('section_name')}")
+                    print(f"  DEBUG → '{dbg.get('item_name')}' | cal={dbg.get('calories')} | health={dbg.get('health_score')} | veg={dbg.get('is_veg')} | section={dbg.get('section_name')}")
 
                 if len(items) > 60:
                     enriched += self._enrich_with_rules(items[60:])
@@ -175,6 +211,7 @@ STRICT RULES:
             except Exception as e:
                 logger.warning(f"Model {model_id} failed: {e}. Trying next...")
                 continue
+
 
         logger.warning("All HuggingFace models failed. Falling back to keyword rules.")
         return self._enrich_with_rules(items)

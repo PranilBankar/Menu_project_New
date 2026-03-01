@@ -76,13 +76,16 @@ def run_pipeline():
 
     print(f"[INFO] Enriched items: {len(enriched)}")
     current_cat = None
-    for e in enriched[:20]:   # preview first 20
-        if e["section_name"] != current_cat:
-            current_cat = e["section_name"]
+    for e in enriched[:20]:
+        cat = e.get("section_name", "Unknown")
+        if cat != current_cat:
+            current_cat = cat
             print(f"\n  ── {current_cat} ──")
-        veg = "🟢" if e["is_veg"] else "🔴"
+        veg = "🟢" if e.get("is_veg", True) else "🔴"
         cal = f"~{e['calories']} kcal" if e.get("calories") else ""
-        print(f"  {veg} {e['item_name']:<44} ₹{e['price']:<6}  {cal}")
+        hs  = f"| ♥ {e['health_score']}/10" if e.get("health_score") else ""
+        print(f"  {veg} {e.get('item_name','?'):<44} ₹{e.get('price',0):<6}  {cal} {hs}")
+
 
     if len(enriched) > 20:
         print(f"\n  ... and {len(enriched) - 20} more items")
@@ -100,6 +103,7 @@ def run_pipeline():
             "price":      e["price"],
             "is_veg":     e.get("is_veg"),
             "calories":   e.get("calories"),
+            "health_score": e.get("health_score"),
             "description": e.get("description", ""),
         }
         for e in enriched
