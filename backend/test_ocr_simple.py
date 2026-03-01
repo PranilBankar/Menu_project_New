@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 from app.services.ocr.menu_layout_parser import parse_menu
 
 # ── Config ────────────────────────────────────────────────────────────────────
-REAL_IMAGE  = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu2.jpeg"
+REAL_IMAGE  = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu1.jpeg"
 #DUMMY_IMAGE = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\dummy_menu.jpg"
 
 # ── Dummy generator (fallback if real image missing) ─────────────────────────
@@ -75,25 +75,41 @@ def run_ocr(img_path: str):
         print(f"  {text:<44} {conf:>8.3f}")
     print(f"\n  Total raw tokens: {len(result[0])}")
 
-    # ── Section 2 : Structured menu items ────────────────────────────────────
+    # ── Section 2 : Raw (item, price) pairs from parser ──────────────────────
     print("\n" + "=" * 70)
-    print("  STRUCTURED MENU (after layout parsing)")
+    print("  RAW PARSED PAIRS (layout parser — no categories)")
     print("=" * 70)
     menu = parse_menu(result)
 
     if not menu:
-        print("  [WARN] No structured items could be extracted.")
-    else:
-        current_cat = None
-        for entry in menu:
-            if entry["category"] != current_cat:
-                current_cat = entry["category"]
-                print(f"\n  ── {current_cat} ──")
-            price_str = f"₹{entry['price']:.0f}"
-            print(f"  {entry['item']:<45} {price_str:>8}")
-        print(f"\n  Total structured items: {len(menu)}")
+        print("  [WARN] No items extracted.")
+        return
 
-    return menu
+    for entry in menu:
+        price_str = f"₹{entry['price']:.0f}"
+        print(f"  {entry['item']:<50} {price_str:>8}")
+    print(f"\n  Total pairs: {len(menu)}")
+
+    # ── Section 3 : LLM/rule enriched output ────────────────────────────────
+    print("\n" + "=" * 70)
+    print("  ENRICHED MENU (structurer — categories, is_veg, calories)")
+    print("=" * 70)
+    from app.services.nlp.menu_structurer import get_menu_structurer
+    structurer = get_menu_structurer()
+    enriched = structurer.enrich(menu)
+
+    current_cat = None
+    for e in enriched:
+        if e["section_name"] != current_cat:
+            current_cat = e["section_name"]
+            print(f"\n  ── {current_cat} ──")
+        veg_tag = "🟢" if e["is_veg"] else "🔴"
+        cal_str = f"~{e['calories']} kcal" if e.get("calories") else ""
+        price_str = f"₹{e['price']:.0f}"
+        print(f"  {veg_tag} {e['item_name']:<44} {price_str:>6}  {cal_str}")
+
+    print(f"\n  Total enriched items: {len(enriched)}")
+    return enriched
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
