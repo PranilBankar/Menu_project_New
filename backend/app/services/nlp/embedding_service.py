@@ -278,6 +278,99 @@ class EmbeddingService:
             for row in rows
         ]
 
+    def hybrid_search(self,
+                      query: str,
+                      filters: Dict[str, Any],
+                      top_k: int = 8,
+                      restaurant_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """
+        Semantic search combined with SQL column filters in one query.
+
+        Args:
+            query:          Natural language query (will be embedded)
+            filters:        Dict from QueryParser.parse() — keys:
+                              is_veg, max_price, min_price, max_calories,
+                              min_health_score, section_name
+            top_k:          Max results to return
+            restaurant_ids: Restrict to these restaurants (None = all)
+
+        Returns:
+            List of dicts with item details + similarity score
+        """
+        semantic_q = filters.get("semantic_query") or query
+        query_vector = self.generate_embeddings([semantic_q])[0]
+
+        # ── Build WHERE clauses dynamically ──────────────────────────────────
+        where_clauses = []
+        params: list = [query_vector]   # first param is always for <=> distance
+
+        if restaurant_ids:
+            where_clauses.append("restaurant_id = ANY(%s::uuid[])")
+            params.append(restaurant_ids)
+
+        if filters.get("is_veg") is not None:
+            where_clauses.append("is_veg = %s")
+            params.append(filters["is_veg"])
+
+        if filters.get("max_price") is not None:
+            where_clauses.append("price <= %s")
+            params.append(filters["max_price"])
+
+        if filters.get("min_price") is not None:
+            where_clauses.append("price >= %s")
+            params.append(filters["min_price"])
+
+        if filters.get("max_calories") is not None:
+            where_clauses.append("calories <= %s")
+            params.append(filters["max_calories"])
+
+        if filters.get("min_health_score") is not None:
+            where_clauses.append("health_score >= %s")
+            params.append(filters["min_health_score"])
+
+        if filters.get("section_name"):
+            where_clauses.append("section_name = %s")
+            params.append(filters["section_name"])
+
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        # Second copy of vector for the ORDER BY clause
+        params.append(query_vector)
+        params.append(top_k)
+
+        sql = f"""
+            SELECT id, restaurant_id, section_name, item_name, price,
+                   is_veg, calories, health_score,
+                   1 - (embedding <=> %s::vector) AS similarity
+            FROM   menu_items
+            {where_sql}
+            ORDER  BY embedding <=> %s::vector
+            LIMIT  %s
+        """
+
+        conn = self._get_conn()
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+
+        results = [
+            {
+                "id":             str(row[0]),
+                "restaurant_id":  str(row[1]),
+                "section_name":   row[2],
+                "item_name":      row[3],
+                "price":          row[4],
+                "is_veg":         row[5],
+                "calories":       row[6],
+                "health_score":   row[7],
+                "similarity":     float(row[8]),
+            }
+            for row in rows
+        ]
+
+        logger.info(f"hybrid_search: '{query}' → {len(results)} results | filters={filters}")
+        return results
+
 
 # ── Singleton ─────────────────────────────────────────────────────────────────
 
