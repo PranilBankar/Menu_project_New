@@ -33,10 +33,14 @@ class RAGService:
     Thread-safe: EmbeddingService connection is created per-call (context manager).
     """
 
-    def __init__(self, top_k: int = 6):
+    def __init__(self, top_k: int = 15):
         self.top_k      = top_k
         self.parser     = get_query_parser()
-        self._hf_client = None   # lazy-init
+        self._hf_client = None
+
+    # ── Hard vs Soft filter split ──────────────────────────────────────────────
+    HARD_FILTER_KEYS = {"is_veg", "max_price", "min_price"}   # applied in SQL
+    SOFT_FILTER_KEYS = {"section_name", "min_health_score", "max_calories"}  # LLM hints
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
@@ -58,17 +62,21 @@ class RAGService:
         filters = self.parser.parse(query)
         logger.info(f"RAG: parsed filters = {filters}")
 
-        # 2. Hybrid search
+        # 2. Hybrid search — ONLY apply hard SQL filters for wide retrieval
+        hard_filters = {k: v for k, v in filters.items()
+                        if k in self.HARD_FILTER_KEYS and v is not None}
+        hard_filters["semantic_query"] = filters.get("semantic_query", query)
+
         restaurant_ids = [restaurant_id] if restaurant_id else None
         with EmbeddingService() as svc:
             items = svc.hybrid_search(
                 query=query,
-                filters=filters,
-                top_k=self.top_k,
+                filters=hard_filters,
+                top_k=self.top_k,     # retrieve more candidates
                 restaurant_ids=restaurant_ids,
             )
 
-        # 3. Generate response
+        # 3. Generate response — LLM re-ranks and filters from all candidates
         if not items:
             return {
                 "answer":       "Sorry, I couldn't find any menu items matching your query. Try broadening your search!",
@@ -76,7 +84,8 @@ class RAGService:
                 "filters_used": filters,
             }
 
-        answer = self._generate_answer(query, items, area_name)
+        soft_hints = {k: filters.get(k) for k in self.SOFT_FILTER_KEYS}
+        answer = self._generate_answer(query, items, area_name, soft_hints=soft_hints)
 
         return {
             "answer":       answer,
@@ -89,35 +98,48 @@ class RAGService:
     def _generate_answer(self,
                          query: str,
                          items: List[Dict[str, Any]],
-                         area_name: str) -> str:
-        """Call Qwen to produce a natural language answer given retrieved items."""
+                         area_name: str,
+                         soft_hints: Optional[Dict[str, Any]] = None) -> str:
+        """Call Qwen to select best items and produce a natural language answer."""
 
-        # Format items into a readable context block
+        soft_hints = soft_hints or {}
+
+        # Format all candidate items
         item_lines = []
         for i, it in enumerate(items, 1):
             veg_tag = "Veg" if it.get("is_veg") else "Non-Veg"
-            cal     = f"{it['calories']} kcal" if it.get("calories") else "cal unknown"
+            cal     = f"{it['calories']} kcal" if it.get("calories") else "?"
             hs      = f"health {it['health_score']}/10" if it.get("health_score") else ""
             item_lines.append(
                 f"{i}. {it['item_name']} — {it.get('section_name','?')} — "
                 f"₹{it['price']} — {veg_tag} — {cal} {hs}"
             )
         context = "\n".join(item_lines)
-
         area_str = f" in {area_name}" if area_name else ""
 
-        prompt = f"""You are a friendly and knowledgeable restaurant food assistant{area_str}.
+        # Build soft-hint guidance
+        hint_lines = []
+        if soft_hints.get("section_name"):
+            hint_lines.append(f"- Prefer items from the '{soft_hints['section_name']}' category")
+        if soft_hints.get("min_health_score"):
+            hint_lines.append(f"- Prefer items with health score >= {soft_hints['min_health_score']}/10")
+        if soft_hints.get("max_calories"):
+            hint_lines.append(f"- Prefer items with calories <= {soft_hints['max_calories']} kcal")
+        soft_guidance = ("\nPreferences to consider:\n" + "\n".join(hint_lines)) if hint_lines else ""
 
-A customer asked: "{query}"
+        prompt = f"""You are a friendly restaurant food assistant{area_str}.
 
-Here are the most relevant menu items found:
+Customer asked: "{query}"
+
+Here are {len(items)} candidate menu items (some may not be relevant):
 {context}
+{soft_guidance}
 
-Write a helpful, conversational response (2-4 sentences):
-- Mention 2-3 of the best matching items by name with their price
-- Highlight why they match the customer's request (veg/non-veg, price, health)
-- Be warm and encouraging
-- Do NOT make up items not in the list above"""
+Your task:
+1. SELECT the 3-4 items that BEST match the customer's request (ignore irrelevant ones)
+2. Write a warm, helpful 2-4 sentence response mentioning those items by name with price
+3. Explain briefly why each selected item matches (health, price, category, taste)
+4. If some items clearly don't match the request, do NOT mention them"""
 
         try:
             client = self._get_hf_client()
