@@ -116,11 +116,18 @@ class RAGService:
             cal     = f"{it['calories']} kcal" if it.get("calories") else "?"
             hs      = f"health {it['health_score']}/10" if it.get("health_score") else ""
             item_lines.append(
-                f"{i}. {it['item_name']}{rest_label} — {it.get('section_name','?')} — "
+                f"{i}. {it['item_name']} — {it.get('section_name','?')} — "
                 f"₹{it['price']} — {veg_tag} — {cal} {hs}"
             )
         context = "\n".join(item_lines)
-        area_str = f" in {area_name}" if area_name else ""
+
+        # Build context header with restaurant + area
+        location_parts = []
+        if restaurant_name:
+            location_parts.append(restaurant_name)
+        if area_name:
+            location_parts.append(area_name)
+        location_str = ", ".join(location_parts) or "this restaurant"
 
         # Build soft-hint guidance
         hint_lines = []
@@ -130,21 +137,29 @@ class RAGService:
             hint_lines.append(f"- Prefer items with health score >= {soft_hints['min_health_score']}/10")
         if soft_hints.get("max_calories"):
             hint_lines.append(f"- Prefer items with calories <= {soft_hints['max_calories']} kcal")
-        soft_guidance = ("\nPreferences to consider:\n" + "\n".join(hint_lines)) if hint_lines else ""
+        soft_guidance = ("\nAdditional preferences:\n" + "\n".join(hint_lines)) if hint_lines else ""
 
-        prompt = f"""You are a friendly restaurant food assistant{area_str}.
+        system_msg = (
+            "You are a warm, knowledgeable food guide who helps customers find the "
+            "perfect dish at a restaurant. You speak like a helpful friend — naturally, "
+            "enthusiastically, and conversationally. Never sound robotic or list-like."
+        )
 
-Customer asked: "{query}"
+        prompt = f"""A customer is browsing the menu at **{location_str}** and asked:
 
-Here are {len(items)} candidate menu items (some may not be relevant):
+"{query}"
+
+Here are the available menu items to choose from:
 {context}
 {soft_guidance}
 
-Your task:
-1. SELECT the 3-4 items that BEST match the customer's request (ignore irrelevant ones)
-2. Write a warm, helpful 2-4 sentence response mentioning those items by name with price
-3. Explain briefly why each selected item matches (health, price, category, taste)
-4. If some items clearly don't match the request, do NOT mention them"""
+Your response guidelines:
+- Start by mentioning **{location_str}** naturally (e.g. "At Mac D, ..." or "Mac D has some great options...")
+- Pick the 3-4 items that BEST match what the customer wants — skip irrelevant ones entirely
+- Mention each chosen item by name with its price, and say WHY it's a good fit for this customer
+- Sound warm, genuine and helpful — like a knowledgeable friend recommending food
+- 3-5 sentences max, no bullet points, no numbering, just natural flowing text
+- Do NOT make up items or prices not in the list above"""
 
         try:
             client = self._get_hf_client()
@@ -154,8 +169,9 @@ Your task:
             response = client.chat_completion(
                 model="Qwen/Qwen2.5-7B-Instruct",
                 messages=[
-                    {"role": "system", "content": "You are a helpful restaurant food assistant. Be concise and friendly."},
+                    {"role": "system", "content": system_msg},
                     {"role": "user",   "content": prompt},
+
                 ],
                 max_tokens=300,
                 temperature=0.7,
