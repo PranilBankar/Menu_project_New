@@ -41,7 +41,7 @@ class MenuStructurer:
                 "Content-Type":  "application/json",
             }
             self._hf_url = self.HF_API_URL.format(model=settings.LLM_MODEL)
-            logger.info(f"MenuStructurer: using HuggingFace backend ({settings.LLM_MODEL}).")
+            print(f"[LLM] Backend: HuggingFace  |  model pool: Qwen2.5-7B → Zephyr → Phi-3.5 → Mistral-v0.3")
 
         elif settings.OPENAI_API_KEY:
             try:
@@ -53,7 +53,7 @@ class MenuStructurer:
                 logger.warning("openai package not installed.")
 
         else:
-            logger.info("MenuStructurer: no LLM key found — using keyword rules.")
+            print("MenuStructurer: no LLM key found — using keyword rules.")
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -89,68 +89,81 @@ class MenuStructurer:
                                   items: List[Dict],
                                   restaurant_name: str) -> List[Dict]:
         """
-        Call HuggingFace Inference API (Mistral-7B-Instruct or similar).
-        Uses the [INST] prompt format expected by Mistral-family models.
+        Call HuggingFace Inference API via the official InferenceClient.
+        Tries multiple models in order — first available wins.
+        Falls back to keyword rules if all models fail.
         """
-        import requests
+        try:
+            from huggingface_hub import InferenceClient
+        except ImportError:
+            logger.warning("huggingface_hub not installed. Run: pip install huggingface_hub")
+            return self._enrich_with_rules(items)
 
         item_lines = "\n".join(
-            f"{i+1}. {it['item']} — {it['price']}"
-            for i, it in enumerate(items[:80])  # HF free tier has token limits
+            f"{i+1}. {it['item']} - {it['price']}"
+            for i, it in enumerate(items[:60])   # keep within token limits
         )
-        n = len(items[:80])
+        n = len(items[:60])
 
-        prompt = f"""[INST] You are a restaurant menu expert. Enrich these {n} menu items from '{restaurant_name or 'a restaurant'}' with category, veg status, and calories.
+        system_msg = "You are a restaurant menu expert. Return only valid JSON arrays, no extra text."
+        user_msg = f"""Enrich these {n} menu items from '{restaurant_name or 'a restaurant'}' with category and metadata.
 
 Items:
 {item_lines}
 
-Return ONLY a valid JSON array with exactly {n} objects:
+Return ONLY a JSON array with exactly {n} objects:
 [
-  {{"item_name": "cleaned name", "price": <number>, "section_name": "category", "is_veg": true/false, "calories": <int or null>, "description": "one line"}},
+  {{"item_name": "cleaned name", "price": <number>, "section_name": "category", "is_veg": true/false, "calories": <int or null>, "description": "brief"}},
   ...
 ]
 
-Rules: fix OCR typos in names, use Indian restaurant categories (Biryani/Starters/Veg Mains/Non-Veg Mains/Breads/Rice/Beverages/Desserts), is_veg=false for meat/egg/fish items. Return ONLY the JSON array. [/INST]"""
+Categories: Biryani, Starters, Veg Mains, Non-Veg Mains, Breads, Rice, Beverages, Desserts, Snacks
+Rules: fix OCR typos, is_veg=false for chicken/mutton/fish/egg/prawn, return ONLY the JSON array."""
 
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "temperature":  settings.LLM_TEMPERATURE,
-                "max_new_tokens": 3000,
-                "return_full_text": False,
-            }
-        }
+        # Try models in order — first available wins
+        models_to_try = [
+            "Qwen/Qwen2.5-7B-Instruct",
+            "HuggingFaceH4/zephyr-7b-beta",
+            "microsoft/Phi-3.5-mini-instruct",
+            "mistralai/Mistral-7B-Instruct-v0.3",
+        ]
 
-        try:
-            resp = requests.post(
-                self._hf_url,
-                headers=self._hf_headers,
-                json=payload,
-                timeout=120,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
+        client = InferenceClient(token=settings.HUGGINGFACE_API_KEY)
 
-            # HF returns [{"generated_text": "..."}]
-            generated = raw[0]["generated_text"] if isinstance(raw, list) else raw.get("generated_text", "")
+        for model_id in models_to_try:
+            try:
+                print(f"[LLM] Trying model: {model_id} ...")
+                response = client.chat_completion(
+                    model=model_id,
+                    messages=[
+                        {"role": "system", "content": system_msg},
+                        {"role": "user",   "content": user_msg},
+                    ],
+                    max_tokens=3000,
+                    temperature=settings.LLM_TEMPERATURE,
+                )
+                generated = response.choices[0].message.content.strip()
 
-            # Extract JSON array from the response
-            match = re.search(r'\[.*\]', generated, re.DOTALL)
-            if not match:
-                raise ValueError("No JSON array found in HF response")
+                match = re.search(r'\[.*\]', generated, re.DOTALL)
+                if not match:
+                    raise ValueError(f"No JSON array in response from {model_id}")
 
-            enriched = json.loads(match.group(0))
+                enriched = json.loads(match.group(0))
+                print(f"[LLM] SUCCESS: enriched {len(enriched)} items using {model_id}")
 
-            # Handle remaining items beyond the 80-item limit with rules
-            if len(items) > 80:
-                enriched += self._enrich_with_rules(items[80:])
+                if len(items) > 60:
+                    enriched += self._enrich_with_rules(items[60:])
 
-            return enriched
+                return enriched
 
-        except Exception as e:
-            logger.warning(f"HuggingFace enrichment failed: {e}. Falling back to keyword rules.")
-            return self._enrich_with_rules(items)
+            except Exception as e:
+                logger.warning(f"Model {model_id} failed: {e}. Trying next...")
+                continue
+
+        logger.warning("All HuggingFace models failed. Falling back to keyword rules.")
+        return self._enrich_with_rules(items)
+
+
 
     def _enrich_with_llm(self,
                           items: List[Dict],
