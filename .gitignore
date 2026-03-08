@@ -56,9 +56,9 @@ htmlcov/
 .hypothesis/
 
 # ML Models & Data
-ml_models/downloaded/
-data/raw/
-data/processed/
+# ml_models/downloaded/
+# data/raw/
+# data/processed/
 *.pkl
 *.h5
 *.pt
