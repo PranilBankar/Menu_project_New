@@ -16,7 +16,7 @@ class MenuEmbedding(Base):
     embedding_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     item_id = Column(UUID(as_uuid=True), ForeignKey("menu_items.item_id", ondelete="CASCADE"), nullable=False, unique=True)
     embedding = Column(Vector(384))  # MiniLM dimension
-    metadata = Column(JSONB)  # Store additional context
+    extra_metadata = Column(JSONB)  # Store additional context (renamed from 'metadata' — reserved by SQLAlchemy)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
