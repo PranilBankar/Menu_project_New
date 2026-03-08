@@ -307,12 +307,12 @@ class EmbeddingService:
 
         # Area filter — searches ALL restaurants in the area
         if area_name:
-            where_clauses.append("a.area_name ILIKE %s")
+            where_clauses.append("a.name ILIKE %s")
             params.append(area_name)
 
         # Specific restaurant filter (overrides area if both are given)
         if restaurant_ids:
-            where_clauses.append("mi.restaurant_id = ANY(%s::uuid[])")
+            where_clauses.append("r.id = ANY(%s::uuid[])")
             params.append(restaurant_ids)
 
         # Hard column filters
@@ -347,13 +347,13 @@ class EmbeddingService:
         params.append(top_k)
 
         sql = f"""
-            SELECT mi.id, mi.restaurant_id, r.restaurant_name,
+            SELECT mi.id, mi.restaurant_id, r.name,
                    mi.section_name, mi.item_name, mi.price,
                    mi.is_veg, mi.calories, mi.health_score,
                    1 - (mi.embedding <=> %s::vector) AS similarity
             FROM   menu_items        mi
-            JOIN   restaurants       r  ON mi.restaurant_id = r.restaurant_id
-            LEFT JOIN areas          a  ON r.area_id        = a.area_id
+            JOIN   restaurants       r  ON mi.restaurant_id = r.id
+            LEFT JOIN areas          a  ON r.area_id        = a.id
             {where_sql}
             ORDER  BY mi.embedding <=> %s::vector
             LIMIT  %s
