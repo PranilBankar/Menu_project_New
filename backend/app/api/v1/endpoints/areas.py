@@ -4,32 +4,13 @@ Areas API Endpoints
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel
 import uuid
 
 from app.core.database import get_db
 from app.models.area import Area
+from app.schemas.area import AreaCreate, AreaResponse
 
 router = APIRouter()
-
-
-# Pydantic schemas
-class AreaCreate(BaseModel):
-    area_name: str
-    city: str
-    pincode: str | None = None
-    state: str | None = None
-
-
-class AreaResponse(BaseModel):
-    area_id: uuid.UUID
-    area_name: str
-    city: str
-    pincode: str | None
-    state: str | None
-    
-    class Config:
-        from_attributes = True
 
 
 @router.post("/", response_model=AreaResponse)

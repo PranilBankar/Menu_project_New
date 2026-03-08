@@ -4,7 +4,6 @@ Menu Upload API Endpoints
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel
 import uuid
 from pathlib import Path
 import shutil
@@ -19,35 +18,9 @@ from app.models.menu import MenuSection, MenuItem
 from app.services.ocr.ocr_engine import get_ocr_engine
 from app.services.nlp.menu_structurer import get_menu_structurer
 from app.services.health.health_scorer import get_health_scorer
+from app.schemas.menu import UploadResponse, UploadStatusResponse
 
 router = APIRouter()
-
-
-# Pydantic schemas
-class UploadResponse(BaseModel):
-    upload_id: uuid.UUID
-    status: str
-    message: str
-    restaurant_name: str | None = None
-    items_count: int | None = None
-    
-    class Config:
-        from_attributes = True
-
-
-class UploadStatusResponse(BaseModel):
-    upload_id: uuid.UUID
-    status: str
-    restaurant_id: uuid.UUID | None
-    image_path: str
-    ocr_result: dict | None
-    structured_data: dict | None
-    error_message: str | None
-    uploaded_at: datetime
-    processed_at: datetime | None
-    
-    class Config:
-        from_attributes = True
 
 
 @router.post("/upload", response_model=UploadResponse)

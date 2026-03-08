@@ -4,38 +4,14 @@ Restaurants API Endpoints
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel
 import uuid
 
 from app.core.database import get_db
 from app.models.restaurant import Restaurant
 from app.models.area import Area
+from app.schemas.restaurant import RestaurantCreate, RestaurantResponse
 
 router = APIRouter()
-
-
-# Pydantic schemas
-class RestaurantCreate(BaseModel):
-    area_id: uuid.UUID
-    restaurant_name: str
-    cuisine_type: List[str] | None = None
-    price_category: str | None = None
-    address: str | None = None
-    phone: str | None = None
-
-
-class RestaurantResponse(BaseModel):
-    restaurant_id: uuid.UUID
-    area_id: uuid.UUID
-    restaurant_name: str
-    cuisine_type: List[str] | None
-    price_category: str | None
-    address: str | None
-    phone: str | None
-    is_active: bool
-    
-    class Config:
-        from_attributes = True
 
 
 @router.post("/", response_model=RestaurantResponse)

@@ -3,38 +3,12 @@ POST /api/v1/chat  — RAG-powered food discovery chatbot endpoint
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from app.services.nlp.rag_service import get_rag_service
+from app.schemas.chat import ChatRequest, ChatResponse
 
 router = APIRouter()
-
-
-# ── Request / Response schemas ────────────────────────────────────────────────
-
-class ChatRequest(BaseModel):
-    query:         str
-    area_name:     Optional[str] = ""     # user's location — searches all nearby restaurants
-    restaurant_id: Optional[str] = None   # optional: restrict to one restaurant
-
-
-class MenuItem(BaseModel):
-    item_name:    str
-    section_name: Optional[str]
-    price:        Optional[int]
-    is_veg:       Optional[bool]
-    calories:     Optional[int]
-    health_score: Optional[int]
-    similarity:   Optional[float]
-
-
-class ChatResponse(BaseModel):
-    answer:       str
-    items:        List[Dict[str, Any]]
-    filters_used: Dict[str, Any]
 
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
