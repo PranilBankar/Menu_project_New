@@ -23,6 +23,7 @@ TEST_QUERIES = [
     ("cold drink below 100 rupees",          {"max_price": 100}),
     ("cheap non-veg curry",                  {"is_veg": False}),
     ("low calorie light food",               {"max_calories": 400}),
+    ("I want to eat something light that is not to spicy and should come under rupees 500",               {"max_price": 500}),
 ]
 
 
