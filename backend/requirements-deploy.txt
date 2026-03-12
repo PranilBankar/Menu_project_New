@@ -1,0 +1,32 @@
+# ============================================================
+# Deployment Requirements (lean — no OCR/torch)
+# Used by Render/Railway for the deployed API server.
+# The chat, areas, and restaurants endpoints work with these.
+# For menu upload (OCR), run the backend locally instead.
+# ============================================================
+
+# ─── Core Framework ─────────────────────────────────────────
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# ─── Database ───────────────────────────────────────────────
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+pgvector==0.2.4
+
+# ─── NLP & Embeddings ───────────────────────────────────────
+sentence-transformers==2.3.1
+transformers==4.37.2
+numpy==1.26.3
+
+# ─── LLM Integration (Qwen via HuggingFace) ────────────────
+huggingface_hub==0.19.3
+
+# ─── Utilities ──────────────────────────────────────────────
+python-dotenv==1.0.0
+python-multipart==0.0.6
+aiofiles==23.2.1
+httpx==0.26.0
+requests>=2.28.0
