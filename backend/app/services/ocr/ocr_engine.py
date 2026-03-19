@@ -1,13 +1,20 @@
 """
 OCR Engine - Extract text from menu images using PaddleOCR
 """
-import cv2
-import numpy as np
-from PIL import Image
-from paddleocr import PaddleOCR
-from typing import List, Dict, Tuple
 import re
+from typing import List, Dict, Tuple
 from pathlib import Path
+
+try:
+    import cv2
+    import numpy as np
+    from PIL import Image
+    from paddleocr import PaddleOCR
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+
+from app.core.config import settings
 
 from app.core.config import settings
 
@@ -19,6 +26,9 @@ class OCREngine:
     
     def __init__(self):
         """Initialize PaddleOCR"""
+        if not OCR_AVAILABLE:
+            raise RuntimeError("OCR dependencies not installed. Menu upload is disabled on this server.")
+            
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en'
