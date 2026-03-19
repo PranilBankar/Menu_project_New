@@ -34,7 +34,7 @@ class OCREngine:
             lang='en'
         )
     
-    def preprocess_image(self, image_path: str) -> np.ndarray:
+    def preprocess_image(self, image_path: str) -> 'np.ndarray':
         """
         Preprocess image for better OCR results
         
