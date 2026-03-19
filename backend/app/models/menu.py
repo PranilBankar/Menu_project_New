@@ -12,8 +12,8 @@ from app.core.database import Base
 class MenuSection(Base):
     __tablename__ = "menu_sections"
     
-    section_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.restaurant_id", ondelete="CASCADE"), nullable=False)
+    section_id = Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False)
     section_name = Column(String(255), nullable=False)
     display_order = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -29,8 +29,8 @@ class MenuSection(Base):
 class MenuItem(Base):
     __tablename__ = "menu_items"
     
-    item_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    section_id = Column(UUID(as_uuid=True), ForeignKey("menu_sections.section_id", ondelete="CASCADE"), nullable=False)
+    item_id = Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    section_id = Column(UUID(as_uuid=True), ForeignKey("menu_sections.id", ondelete="CASCADE"), nullable=False)
     item_name = Column(String(255), nullable=False, index=True)
     description = Column(Text)
     price = Column(Numeric(10, 2), nullable=False, index=True)

@@ -13,7 +13,7 @@ class MenuUpload(Base):
     __tablename__ = "menu_uploads"
     
     upload_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.restaurant_id", ondelete="SET NULL"))
+    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.id", ondelete="SET NULL"))
     image_path = Column(String(500), nullable=False)
     ocr_status = Column(String(20), default='pending')  # pending, processing, completed, failed
     ocr_result = Column(JSONB)  # Store raw OCR output
