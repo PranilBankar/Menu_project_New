@@ -12,16 +12,24 @@ from app.core.database import Base
 class Restaurant(Base):
     __tablename__ = "restaurants"
     
-    restaurant_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    area_id = Column(UUID(as_uuid=True), ForeignKey("areas.area_id", ondelete="CASCADE"), nullable=False)
-    restaurant_name = Column(String(255), nullable=False, index=True)
+    restaurant_id = Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    area_id = Column("area_id", UUID(as_uuid=True), ForeignKey("areas.id", ondelete="CASCADE"), nullable=False)
+    restaurant_name = Column("name", String(255), nullable=False, index=True)
     cuisine_type = Column(ARRAY(String(100)))  # Array of cuisines
     price_category = Column(String(20))  # budget, mid-range, premium
-    address = Column(String(500))
-    phone = Column(String(20))
-    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    @property
+    def address(self):
+        return None
+
+    @property
+    def phone(self):
+        return None
+
+    @property
+    def is_active(self):
+        return True
     
     # Relationships
     area = relationship("Area", back_populates="restaurants")

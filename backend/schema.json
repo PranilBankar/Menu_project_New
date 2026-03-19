@@ -1,0 +1,32 @@
+{
+  "areas": [
+    "id",
+    "created_at",
+    "name",
+    "city",
+    "pincode"
+  ],
+  "restaurants": [
+    "id",
+    "area_id",
+    "created_at",
+    "name",
+    "cuisine_type",
+    "price_category"
+  ],
+  "menu_sections": [],
+  "menu_items": [
+    "created_at",
+    "restaurant_id",
+    "health_score",
+    "embedding",
+    "id",
+    "price",
+    "is_veg",
+    "calories",
+    "section_name",
+    "item_name",
+    "description"
+  ],
+  "menu_uploads": []
+}
