@@ -163,56 +163,84 @@ class EmbeddingService:
         logger.info(f"Generating embeddings for {len(texts)} items ...")
         vectors = self.generate_embeddings(texts)
 
-        # Upsert into Supabase
+        # Upsert into Supabase (6-table schema: menu_sections → menu_items → menu_embeddings)
         conn = self._get_conn()
         inserted = 0
+        section_cache: Dict[str, str] = {}  # section_name → section_id
+
         with conn.cursor() as cur:
             for item, vector in zip(parsed_items, vectors):
-                price = item.get("price")
-                # Safely cast price to int (skip if not a clean number)
-                try:
-                    price_int = int(float(price)) if price is not None else None
-                except (TypeError, ValueError):
-                    price_int = None
+                section_name = item.get("category", "General")
 
-                # Safely cast calories to int
+                # 1. Get-or-create section in menu_sections
+                if section_name not in section_cache:
+                    cur.execute(
+                        """SELECT section_id FROM menu_sections
+                           WHERE restaurant_id = %s AND section_name = %s""",
+                        (restaurant_id, section_name),
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        section_cache[section_name] = str(row[0])
+                    else:
+                        sec_id = str(uuid.uuid4())
+                        cur.execute(
+                            """INSERT INTO menu_sections (section_id, restaurant_id, section_name)
+                               VALUES (%s, %s, %s)""",
+                            (sec_id, restaurant_id, section_name),
+                        )
+                        section_cache[section_name] = sec_id
+
+                sec_id = section_cache[section_name]
+
+                # Safely cast price
+                try:
+                    price_val = float(item.get("price", 0))
+                except (TypeError, ValueError):
+                    price_val = 0
+
+                # Safely cast calories
                 try:
                     cal = item.get("calories")
                     calories_int = int(cal) if cal is not None else None
                 except (TypeError, ValueError):
                     calories_int = None
 
-                # Safely cast health_score to int
+                # Safely cast health_score
                 try:
                     hs = item.get("health_score")
                     health_score_int = int(hs) if hs is not None else None
                 except (TypeError, ValueError):
                     health_score_int = None
 
+                # 2. Insert menu item
+                item_id = str(uuid.uuid4())
                 cur.execute(
-                    """
-                    INSERT INTO menu_items
-                        (id, restaurant_id, section_name, item_name, price,
-                         is_veg, calories, health_score, embedding)
-                    VALUES
-                        (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT DO NOTHING
-                    """,
+                    """INSERT INTO menu_items
+                        (item_id, section_id, item_name, description, price,
+                         is_veg, calories, health_score)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                       ON CONFLICT DO NOTHING""",
                     (
-                        str(uuid.uuid4()),
-                        restaurant_id,
-                        item.get("category", "General"),
+                        item_id,
+                        sec_id,
                         item["item"],
-                        price_int,
+                        item.get("description"),
+                        price_val,
                         item.get("is_veg"),
                         calories_int,
                         health_score_int,
-                        vector,
                     ),
                 )
+
+                # 3. Insert embedding into menu_embeddings
+                cur.execute(
+                    """INSERT INTO menu_embeddings (embedding_id, item_id, embedding)
+                       VALUES (%s, %s, %s)
+                       ON CONFLICT (item_id) DO UPDATE SET embedding = EXCLUDED.embedding""",
+                    (str(uuid.uuid4()), item_id, vector),
+                )
                 inserted += 1
-
-
 
         conn.commit()
         logger.info(f"Upserted {inserted} menu items for restaurant {restaurant_id}.")
@@ -240,25 +268,27 @@ class EmbeddingService:
 
         conn = self._get_conn()
         with conn.cursor() as cur:
+            base_sql = """
+                SELECT mi.item_id, ms.restaurant_id, ms.section_name,
+                       mi.item_name, mi.price,
+                       1 - (me.embedding <=> %s::vector) AS similarity
+                FROM   menu_embeddings  me
+                JOIN   menu_items       mi ON me.item_id       = mi.item_id
+                JOIN   menu_sections    ms ON mi.section_id     = ms.section_id
+            """
             if restaurant_ids:
                 cur.execute(
-                    """
-                    SELECT id, restaurant_id, section_name, item_name, price,
-                           1 - (embedding <=> %s::vector) AS similarity
-                    FROM   menu_items
-                    WHERE  restaurant_id = ANY(%s::uuid[])
-                    ORDER  BY embedding <=> %s::vector
+                    base_sql + """
+                    WHERE  ms.restaurant_id = ANY(%s::uuid[])
+                    ORDER  BY me.embedding <=> %s::vector
                     LIMIT  %s
                     """,
                     (query_vector, restaurant_ids, query_vector, top_k),
                 )
             else:
                 cur.execute(
-                    """
-                    SELECT id, restaurant_id, section_name, item_name, price,
-                           1 - (embedding <=> %s::vector) AS similarity
-                    FROM   menu_items
-                    ORDER  BY embedding <=> %s::vector
+                    base_sql + """
+                    ORDER  BY me.embedding <=> %s::vector
                     LIMIT  %s
                     """,
                     (query_vector, query_vector, top_k),
@@ -307,12 +337,12 @@ class EmbeddingService:
 
         # Area filter — searches ALL restaurants in the area
         if area_name:
-            where_clauses.append("a.name ILIKE %s")
+            where_clauses.append("a.area_name ILIKE %s")
             params.append(area_name)
 
         # Specific restaurant filter (overrides area if both are given)
         if restaurant_ids:
-            where_clauses.append("r.id = ANY(%s::uuid[])")
+            where_clauses.append("r.restaurant_id = ANY(%s::uuid[])")
             params.append(restaurant_ids)
 
         # Hard column filters
@@ -337,7 +367,7 @@ class EmbeddingService:
             params.append(filters["min_health_score"])
 
         if filters.get("section_name"):
-            where_clauses.append("mi.section_name = %s")
+            where_clauses.append("ms.section_name = %s")
             params.append(filters["section_name"])
 
         where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
@@ -347,15 +377,17 @@ class EmbeddingService:
         params.append(top_k)
 
         sql = f"""
-            SELECT mi.id, mi.restaurant_id, r.name,
-                   mi.section_name, mi.item_name, mi.price,
+            SELECT mi.item_id, ms.restaurant_id, r.restaurant_name,
+                   ms.section_name, mi.item_name, mi.price,
                    mi.is_veg, mi.calories, mi.health_score,
-                   1 - (mi.embedding <=> %s::vector) AS similarity
-            FROM   menu_items        mi
-            JOIN   restaurants       r  ON mi.restaurant_id = r.id
-            LEFT JOIN areas          a  ON r.area_id        = a.id
+                   1 - (me.embedding <=> %s::vector) AS similarity
+            FROM   menu_embeddings   me
+            JOIN   menu_items        mi ON me.item_id        = mi.item_id
+            JOIN   menu_sections     ms ON mi.section_id     = ms.section_id
+            JOIN   restaurants       r  ON ms.restaurant_id  = r.restaurant_id
+            LEFT JOIN areas          a  ON r.area_id         = a.area_id
             {where_sql}
-            ORDER  BY mi.embedding <=> %s::vector
+            ORDER  BY me.embedding <=> %s::vector
             LIMIT  %s
         """
 

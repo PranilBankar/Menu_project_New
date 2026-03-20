@@ -14,6 +14,7 @@ class UploadResponse(BaseModel):
     message: str
     restaurant_name: Optional[str] = None
     items_count: Optional[int] = None
+    embedded_count: Optional[int] = None
 
     class Config:
         from_attributes = True

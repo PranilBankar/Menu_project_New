@@ -12,15 +12,15 @@ from app.core.database import Base
 
 class MenuEmbedding(Base):
     __tablename__ = "menu_embeddings"
-    
+
     embedding_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    item_id = Column(UUID(as_uuid=True), ForeignKey("menu_items.id", ondelete="CASCADE"), nullable=False, unique=True)
-    embedding = Column(Vector(384))  # MiniLM dimension
-    extra_metadata = Column(JSONB)  # Store additional context (renamed from 'metadata' — reserved by SQLAlchemy)
+    item_id = Column(UUID(as_uuid=True), ForeignKey("menu_items.item_id", ondelete="CASCADE"), nullable=False, unique=True)
+    embedding = Column(Vector(384))
+    extra_metadata = Column("metadata", JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     menu_item = relationship("MenuItem", back_populates="embedding")
-    
+
     def __repr__(self):
         return f"<MenuEmbedding(item_id='{self.item_id}')>"
