@@ -14,7 +14,7 @@ RESTAURANT_NAME = "Mac D"
 AREA_NAME       = "VR Mall"
 # ─────────────────────────────────────────────────────────────────────────────
 
-from app.services.nlp.rag_service import RAGService
+# from app.services.nlp.rag_service import RAGService
 
 TEST_QUERIES = [
     ("healthy veg food under 200",           {"is_veg": True,  "max_price": 200}),
