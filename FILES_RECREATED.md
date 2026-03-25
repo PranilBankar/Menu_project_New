@@ -215,7 +215,7 @@ menu_uploads (tracks processing)
 
 ---
 
-## 🎉 You're Ready! //
+## 🎉 You're Ready! 
 
 Your complete Menu Intelligence System is now:
 
