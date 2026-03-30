@@ -1,0 +1,95 @@
+Total tokens: 53
+
+#         Y    X-L    X-R   Gap  Conf  Price?  Text
+-------------------------------------------------------------------------------------
+1        26     24    129     0  0.99          BREAKFAST
+--- new row ---
+2        53     24     77     0  0.98          Eggs benedict
+3        57    167    181    90  0.99   PRICE  $5  <<GAP 90px>>
+--- new row ---
+4        74     25     94     0  0.97          Waffie fresh berries
+5        80    167    181    73  0.95   PRICE  $6  <<GAP 73px>>
+--- new row ---
+6        98     25    105     0  0.99          Porridge with cherries
+--- new row ---
+7       120     23    117     0  0.99          Poached egg sandwiches
+8       126    167    181    50  0.98   PRICE  $5  <<GAP 50px>>
+--- new row ---
+9       144     25    128     0  0.96          Banans and blackberry toast
+--- new row ---
+10      167     25    129     0  0.99          Avocado cream cheese tosst
+11      171    167    183    38  0.85   PRICE  $11  <<GAP 38px>>
+--- new row ---
+12      188     24    103     0  0.98          Porridge with cherries
+13      193    168    179    65  0.99   PRICE  $7  <<GAP 65px>>
+14      194    420    480   241  0.99          JUICE  <<GAP 241px>>
+--- new row ---
+15      210     21    125     0  0.99          Banana and blackberry toast
+16      214    164    177    39  0.94   PRICE  $9  <<GAP 39px>>
+--- new row ---
+17      228    416    476     0  0.99          Orange juice
+--- new row ---
+18      252     27    142     0  1.00          SMOOTHIES
+19      254    205    252    63  1.00          MAIN  <<GAP 63px>>
+20      254    417    477   165  0.99          Tomato juice  <<GAP 165px>>
+21      260    539    555    62  1.00   PRICE  $5  <<GAP 62px>>
+--- new row ---
+22      275     24    101     0  0.99          Green smoothie
+23      275    204    237   103  1.00          Lasagna  <<GAP 103px>>
+24      279    363    382   126  0.89   PRICE  S10  <<GAP 126px>>
+25      280    416    488    34  0.99          Pineapple juice  <<GAP 34px>>
+26      282    147    165  -341  0.89   PRICE  .$6
+27      287    537    556   372  0.82   PRICE  .$4  <<GAP 372px>>
+28      298    204    243  -352  1.00          Beef stew
+29      302    362    379   119  0.72   PRICE  .$9  <<GAP 119px>>
+30      302     24    105  -355  0.98          Mango smoothie
+31      308    415    496   310  0.97          Watermelon juice  <<GAP 310px>>
+32      308    147    164  -349  0.95   PRICE  .$7
+33      315    538    556   374  1.00   PRICE  $3  <<GAP 374px>>
+34      320    203    253  -353  0.96          Salmon steal
+35      324    363    381   110  0.64          sn  <<GAP 110px>>
+36      329     25    117  -356  0.97          Blueberry smoothie
+37      333    417    473   300  0.97          Apple juice  <<GAP 300px>>
+38      336    144    167  -329  0.79   PRICE  .$4
+39      340    535    556   368  0.90   PRICE  .$3  <<GAP 368px>>
+40      344    204    241  -352  0.94          Spaghetti
+41      348    362    379   121  0.83   PRICE  .$8  <<GAP 121px>>
+42      358     26    126  -353  0.97          Watermelon smoothie
+43      360    416    474   290  0.98          Lemon juice  <<GAP 290px>>
+44      364    145    165  -329  0.93   PRICE  .$5
+45      364    538    555   373  1.00   PRICE  $3  <<GAP 373px>>
+46      366    204    262  -351  1.00          Green pea soup
+47      370    362    379   100  0.79   PRICE  .$9  <<GAP 100px>>
+48      382    416    479    37  0.98          Banana juice  <<GAP 37px>>
+49      384     25    106  -454  0.96          Mango smoothie
+50      388    204    311    98  1.00          Pappardelle pasta mushroom  <<GAP 98px>>
+51      388    542    555   231  0.74   PRICE  $3  <<GAP 231px>>
+52      390    145    165  -410  0.78   PRICE  .S7
+53      394    363    380   198  0.51   PRICE  S11  <<GAP 198px>>
+
+=====================================================================================
+PARSED ITEMS:
+=====================================================================================
+1    Eggs benedict                                     5.00
+2    Waffie fresh berries                              6.00
+3    Poached egg sandwiches                            5.00
+4    Avocado cream cheese tosst                       11.00
+5    Porridge with cherries                            7.00
+6    Banana and blackberry toast                       9.00
+7    Tomato juice                                      5.00
+8    Green smoothie                                    6.00
+9    Lasagna                                          10.00
+10   Mango smoothie                                    7.00
+11   Beef stew                                         9.00
+12   sn                                                3.00
+13   Blueberry smoothie                                4.00
+14   Spaghetti                                         8.00
+15   Watermelon smoothie                               5.00
+16   Lemon juice                                       3.00
+17   Mango smoothie                                    7.00
+18   Banana juice                                      3.00
+19   Pineapple juice                                   4.00
+20   Apple juice                                       3.00
+21   Green pea soup                                    9.00
+
+Total: 21

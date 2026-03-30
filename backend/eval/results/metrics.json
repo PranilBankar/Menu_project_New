@@ -1,0 +1,614 @@
+{
+  "detection": {
+    "true_positives": 56,
+    "false_positives": 8,
+    "false_negatives": 14,
+    "precision": 0.875,
+    "recall": 0.8,
+    "f1_score": 0.8358
+  },
+  "name_similarity": {
+    "mean": 0.9089,
+    "min": 0.5,
+    "max": 1.0
+  },
+  "price_accuracy": {
+    "mean_absolute_error": 0.68,
+    "exact_match_pct": 85.7
+  },
+  "section_accuracy_pct": 10.7,
+  "veg_accuracy_pct": 98.2,
+  "counts": {
+    "ground_truth_items": 70,
+    "predicted_items": 64,
+    "matched": 56
+  },
+  "match_details": [
+    {
+      "pred_name": "Plain Paratha",
+      "gt_name": "Plain Paratha",
+      "name_sim": 1.0,
+      "pred_price": 1.0,
+      "gt_price": 1.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Shawarma",
+      "gt_name": "Shawarma",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Egg Paratha Roll",
+      "gt_name": "Egg Paratha Roll",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": false
+    },
+    {
+      "pred_name": "Arabic Shawarma",
+      "gt_name": "Arabic Shawarma",
+      "name_sim": 1.0,
+      "pred_price": 10.0,
+      "gt_price": 10.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Plain Paratha+ Sabzi",
+      "gt_name": "Plain Paratha + Sabzi",
+      "name_sim": 1.0,
+      "pred_price": 3.0,
+      "gt_price": 3.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Daal Small",
+      "gt_name": "Daal Small",
+      "name_sim": 1.0,
+      "pred_price": 2.0,
+      "gt_price": 2.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mexican Shawarma (Small)",
+      "gt_name": "Mexican Shawarma (Small)",
+      "name_sim": 1.0,
+      "pred_price": 5.0,
+      "gt_price": 5.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mix Vegetable Paratha",
+      "gt_name": "Mix Vegetable Paratha",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Daal Large",
+      "gt_name": "Daal Large",
+      "name_sim": 1.0,
+      "pred_price": 5.0,
+      "gt_price": 5.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mexican Shawarma (Large)",
+      "gt_name": "Mexican Shawarma (Large)",
+      "name_sim": 1.0,
+      "pred_price": 15.0,
+      "gt_price": 15.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Aloo Paratha w/Podena",
+      "gt_name": "Aloo Paratha w/Podena",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Hassan Mathar",
+      "gt_name": "Hassan Mathar",
+      "name_sim": 1.0,
+      "pred_price": 6.0,
+      "gt_price": 6.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Algo Paratha w/Gobi",
+      "gt_name": "Aloo Paratha w/Gobi",
+      "name_sim": 0.5,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Qeema Small",
+      "gt_name": "Qeema Small",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Aloo Paratha w/Methi",
+      "gt_name": "Aloo Paratha w/Methi",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Qeema Large",
+      "gt_name": "Qeema Large",
+      "name_sim": 1.0,
+      "pred_price": 5.0,
+      "gt_price": 5.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Aloo Paratha w/Garlic",
+      "gt_name": "Aloo Paratha w/Garlic",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Chana Small",
+      "gt_name": "Chana Small",
+      "name_sim": 1.0,
+      "pred_price": 3.0,
+      "gt_price": 3.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Methi Paratha",
+      "gt_name": "Methi Paratha",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Chana Large",
+      "gt_name": "Chana Large",
+      "name_sim": 1.0,
+      "pred_price": 5.0,
+      "gt_price": 5.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Grilled Chicken Only",
+      "gt_name": "Grilled Chicken Only",
+      "name_sim": 1.0,
+      "pred_price": 17.0,
+      "gt_price": 17.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Methi Paratha w/Garlic",
+      "gt_name": "Methi Paratha w/Garlic",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Coffee",
+      "gt_name": "Coffee",
+      "name_sim": 1.0,
+      "pred_price": 2.0,
+      "gt_price": 2.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Grilled Chicken w/Bread (Full",
+      "gt_name": "Grilled Chicken w/Bread (Full)",
+      "name_sim": 1.0,
+      "pred_price": 22.0,
+      "gt_price": 22.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mooli Paratha",
+      "gt_name": "Mooli Paratha",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Tea",
+      "gt_name": "Tea",
+      "name_sim": 1.0,
+      "pred_price": 1.0,
+      "gt_price": 1.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Grilled Chicken w/Bread (Half",
+      "gt_name": "Grilled Chicken w/Bread (Half)",
+      "name_sim": 1.0,
+      "pred_price": 17.0,
+      "gt_price": 12.0,
+      "price_error": 5.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mooli Paratha w/Methi",
+      "gt_name": "Mooli Paratha w/Methi",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Grilled Chicken (Half",
+      "gt_name": "Grilled Chicken w/Rice (Half)",
+      "name_sim": 0.75,
+      "pred_price": 2.0,
+      "gt_price": 20.0,
+      "price_error": 18.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mooli Paratha w/Podena",
+      "gt_name": "Mooli Paratha w/Podena",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Grilled Chicken w/Rice (Half",
+      "gt_name": "Grilled Chicken w/Rice (Full)",
+      "name_sim": 0.6,
+      "pred_price": 20.0,
+      "gt_price": 26.0,
+      "price_error": 6.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Plain Paya",
+      "gt_name": "Plain Paya",
+      "name_sim": 1.0,
+      "pred_price": 9.0,
+      "gt_price": 9.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mix Vegetable Samosa",
+      "gt_name": "Mix Vegetable Samosa",
+      "name_sim": 1.0,
+      "pred_price": 1.0,
+      "gt_price": 1.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Chicken Samosa",
+      "gt_name": "Chicken Samosa",
+      "name_sim": 1.0,
+      "pred_price": 2.5,
+      "gt_price": 2.5,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Shami Kabab (3Pcs",
+      "gt_name": "Shami Kabab (3Pcs)",
+      "name_sim": 1.0,
+      "pred_price": 10.0,
+      "gt_price": 10.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Falafel Plate",
+      "gt_name": "Falafel Plate",
+      "name_sim": 1.0,
+      "pred_price": 10.0,
+      "gt_price": 10.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Hot Dog Plate",
+      "gt_name": "Hot Dog Plate",
+      "name_sim": 1.0,
+      "pred_price": 10.0,
+      "gt_price": 10.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Shawarma Plate w/Bread",
+      "gt_name": "Shawarma Plate w/Bread",
+      "name_sim": 1.0,
+      "pred_price": 20.0,
+      "gt_price": 20.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Soft Drink",
+      "gt_name": "Soft Drink",
+      "name_sim": 1.0,
+      "pred_price": 2.0,
+      "gt_price": 2.0,
+      "price_error": 0.0,
+      "section_match": true,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Maxican Shawarma Plate",
+      "gt_name": "Mexican Shawarma Plate",
+      "name_sim": 0.5,
+      "pred_price": 22.0,
+      "gt_price": 22.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mineral Water (Small",
+      "gt_name": "Mineral Water (Small)",
+      "name_sim": 1.0,
+      "pred_price": 1.0,
+      "gt_price": 1.0,
+      "price_error": 0.0,
+      "section_match": true,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Falafel Sandwich",
+      "gt_name": "Falafel Sandwich",
+      "name_sim": 1.0,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mineral Water (Large",
+      "gt_name": "Mineral Water (Large)",
+      "name_sim": 1.0,
+      "pred_price": 2.0,
+      "gt_price": 2.0,
+      "price_error": 0.0,
+      "section_match": true,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Ice Tea Lemon",
+      "gt_name": "Ice Tea Lemon",
+      "name_sim": 1.0,
+      "pred_price": 3.0,
+      "gt_price": 3.0,
+      "price_error": 0.0,
+      "section_match": true,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Tea",
+      "gt_name": "Tea",
+      "name_sim": 1.0,
+      "pred_price": 1.0,
+      "gt_price": 1.0,
+      "price_error": 0.0,
+      "section_match": true,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Coffee",
+      "gt_name": "Coffee",
+      "name_sim": 1.0,
+      "pred_price": 2.0,
+      "gt_price": 2.0,
+      "price_error": 0.0,
+      "section_match": true,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Shami Chicken Burger",
+      "gt_name": "Shami Chicken Burger",
+      "name_sim": 1.0,
+      "pred_price": 6.0,
+      "gt_price": 6.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Gol Gappy (Small/Large) 5/10 Banana",
+      "gt_name": "Gol Gappy (Small/Large)",
+      "name_sim": 0.6,
+      "pred_price": 6.0,
+      "gt_price": 5.0,
+      "price_error": 1.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Dahi Phulki Small/Large 5/10 Mango",
+      "gt_name": "Dahi Phulki (Small/Large)",
+      "name_sim": 0.6,
+      "pred_price": 6.0,
+      "gt_price": 5.0,
+      "price_error": 1.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Fruit Chaat (Small/Large) 5/10 Strawberry",
+      "gt_name": "Fruit Chaat (Small/Large)",
+      "name_sim": 0.6,
+      "pred_price": 8.0,
+      "gt_price": 5.0,
+      "price_error": 3.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Water Melon",
+      "gt_name": "Water Melon Juice",
+      "name_sim": 0.667,
+      "pred_price": 6.0,
+      "gt_price": 4.0,
+      "price_error": 2.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mint Lemon",
+      "gt_name": "Mint Lemon Juice",
+      "name_sim": 0.667,
+      "pred_price": 4.0,
+      "gt_price": 4.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Pineapple",
+      "gt_name": "Pineapple Juice",
+      "name_sim": 0.5,
+      "pred_price": 8.0,
+      "gt_price": 8.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Carrot",
+      "gt_name": "Carrot Juice",
+      "name_sim": 0.5,
+      "pred_price": 6.0,
+      "gt_price": 8.0,
+      "price_error": 2.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Honey Dew",
+      "gt_name": "Honey Dew Juice",
+      "name_sim": 0.667,
+      "pred_price": 8.0,
+      "gt_price": 8.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    },
+    {
+      "pred_name": "Mix Fruit Cocktail",
+      "gt_name": "Mix Fruit Cocktail Juice",
+      "name_sim": 0.75,
+      "pred_price": 8.0,
+      "gt_price": 8.0,
+      "price_error": 0.0,
+      "section_match": false,
+      "veg_match": true
+    }
+  ],
+  "unmatched_predictions": [
+    "Puri+Chana +Halwa",
+    "Paratha+Paya",
+    "Bread+Butter +Jam+Tea",
+    "Issen",
+    "Mango Lasi",
+    "Fish Burger+S.Drink+Fries",
+    "Beef Burger+S.Drink+Fries",
+    "Drange"
+  ],
+  "missed_ground_truth": [
+    "Plain Omlet",
+    "Fish Burger + S.Drink + Fries",
+    "Beef Burger + S.Drink + Fries",
+    "Channa Chaat (Small/Large)",
+    "Orange Juice",
+    "Puri + Chana + Halwa",
+    "Paratha + Paya",
+    "Bread + Butter + Jam + Tea",
+    "Lassi",
+    "Mango Lassi",
+    "Aloo Samosa",
+    "Banana Milkshake",
+    "Mango Milkshake",
+    "Strawberry Milkshake"
+  ]
+}

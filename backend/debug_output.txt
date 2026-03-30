@@ -1,0 +1,35 @@
+﻿python.exe : Traceback (most recent 
+call last):
+At line:1 char:1
++ & "d:\Users\Pranil\Github Repos\Me
+nu_project_New\.venv\Scripts\python 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSp 
+   ecified: (Traceback (most recen  
+  t call last)::String) [], Remot   
+ eException
+    + FullyQualifiedErrorId : Nativ 
+   eCommandError
+ 
+  File "D:\Users\Pranil\Github Repos
+\Menu_project_New\backend\test_ocr_p
+arse.py", line 84, in <module>
+    main()
+  File "D:\Users\Pranil\Github Repos
+\Menu_project_New\backend\test_ocr_p
+arse.py", line 29, in main
+    print(f"\n\U0001f4f7 Image: 
+{image_path}")
+  File "C:\Users\Pranil\AppData\Loca
+l\Programs\Python\Python311\Lib\enco
+dings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(inp
+ut,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec 
+can't encode character '\U0001f4f7' 
+in position 2: character maps to 
+<undefined>
