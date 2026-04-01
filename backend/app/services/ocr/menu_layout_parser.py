@@ -26,7 +26,7 @@ ROW_TOLERANCE     = 10    # px: max Y-gap to group tokens into the same row
 COLUMN_GAP        = 40    # px: min horizontal gap to split a row into columns
 PRICE_GAP         = 20    # px: min gap after a price token to treat as column break
 ORPHAN_Y_TOLERANCE = 15   # px: max Y-gap to match orphan items with nearby prices
-MIN_CONFIDENCE    = 0.60  # discard OCR tokens below this confidence
+MIN_CONFIDENCE    = 0.50  # discard OCR tokens below this confidence
 MIN_ITEM_LEN      = 2     # minimum chars for a valid item name
 MAX_ITEM_NAME_LEN = 60    # reject overly long names (they're description text)
 MAX_WORDS_IN_NAME = 8     # reject names with too many words
@@ -176,9 +176,12 @@ def _split_into_columns(row: List[Dict]) -> List[List[Dict]]:
         # Was the previous token a price?
         prev_is_price = _parse_price(prev_tok['text'].strip()) is not None
 
-        # Signal 1: Large gap BUT next token is NOT a price
-        # (if next is a price, it belongs to the current item — don't break)
-        is_gap_break = gap >= COLUMN_GAP and not curr_is_price
+        # Signal 1: Large gap means start of a new column
+        # Normal columns split at COLUMN_GAP.
+        # But if the current token is a price, we normally DON'T split so it pairs with text.
+        # However, if the gap is massively large (> 90px), it's crossing over an empty column space
+        # so we MUST split to prevent cross-column stealing (orphan recovery will pair it later).
+        is_gap_break = (gap >= COLUMN_GAP and not curr_is_price) or (gap >= 90)
 
         # Signal 2: Previous token was a price AND there's a gap to next text
         is_price_break = prev_is_price and gap >= PRICE_GAP
