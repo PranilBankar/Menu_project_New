@@ -110,7 +110,7 @@ For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
   {{
     "item_name": "corrected item name (fix obvious OCR typos)",
     "price": <number>,
-    "section_name": "one of: Biryani, Starters, Veg Mains, Non-Veg Mains, Breads, Rice, Beverages, Desserts, Snacks",
+    "section_name": "A specialized culinary category (e.g. Chinese, Desserts, Beverages, Rice, Biryani, Indian Breads). Assign a highly descriptive, specialized section to EVERY item. NEVER use generic names like 'Menu Items' or 'Others'.",
     "is_veg": true or false,
     "calories": <integer — MANDATORY estimate>,
     "health_score": <integer 1-10 — MANDATORY>,
@@ -218,7 +218,7 @@ STRICT RULES:
                           raw_ocr_text: str) -> List[Dict]:
         """Send items to Groq/OpenAI in batches to avoid rate limits."""
         enriched_all = []
-        chunk_size = 35  # safely under Groq's 6000 TPM limit
+        chunk_size = 25  # Down from 35 to prevent JSON output being cut off mid-response
         
         for i in range(0, len(items), chunk_size):
             chunk = items[i:i + chunk_size]
@@ -264,7 +264,7 @@ Rules:
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.2,
-                    max_tokens=2500,  # reduced to avoid Rate Limit
+                    max_tokens=3500,  # increased to prevent unterminated JSON responses
                 )
                 content = response.choices[0].message.content.strip()
                 content = re.sub(r'^```(?:json)?\s*', '', content)
