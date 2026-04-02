@@ -24,9 +24,9 @@ os.environ["FLAGS_use_mkldnn"]  = "0"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-IMAGE_PATH      = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu1.jpeg"
-RESTAURANT_ID   = "11986859-05ac-4e5e-846b-8ccbc7da0323"
-RESTAURANT_NAME = "Mac D"
+IMAGE_PATH      = r"D:\Users\Pranil\Github Repos\Menu_project_New\dataset\Menu3.jpeg"
+RESTAURANT_ID   = "942505ed-2592-47db-8e5e-b3188c4ab78e"
+RESTAURANT_NAME = "Pranil Da Dhaba"
 AREA_NAME       = "Nagpur"
 # ─────────────────────────────────────────────────────────────────────────────
 

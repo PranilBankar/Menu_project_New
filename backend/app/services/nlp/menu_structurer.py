@@ -29,21 +29,18 @@ class MenuStructurer:
     HF_API_URL = "https://api-inference.huggingface.co/models/{model}"
 
     def __init__(self):
-        self.backend = None   # "huggingface" | "openai" | None (rules)
-        self.client  = None   # only set for openai
+        self.backend = None
+        self.client  = None
 
-        provider = getattr(settings, "LLM_PROVIDER", None)
-
-        if provider == "huggingface" and settings.HUGGINGFACE_API_KEY:
-            self.backend = "huggingface"
-            self._hf_headers = {
-                "Authorization": f"Bearer {settings.HUGGINGFACE_API_KEY}",
-                "Content-Type":  "application/json",
-            }
-            self._hf_url = self.HF_API_URL.format(model=settings.LLM_MODEL)
-            print(f"[LLM] Backend: HuggingFace  |  model pool: Qwen2.5-7B → Zephyr → Phi-3.5 → Mistral-v0.3")
-
-        elif settings.OPENAI_API_KEY:
+        if getattr(settings, "GROQ_API_KEY", None):
+            try:
+                from groq import Groq
+                self.client = Groq(api_key=settings.GROQ_API_KEY)
+                self.backend = "groq"
+                logger.info("MenuStructurer: using Groq LLM backend.")
+            except ImportError:
+                logger.warning("groq package not installed.")
+        elif getattr(settings, "OPENAI_API_KEY", None):
             try:
                 from openai import OpenAI
                 self.client  = OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -51,7 +48,6 @@ class MenuStructurer:
                 logger.info("MenuStructurer: using OpenAI LLM backend.")
             except ImportError:
                 logger.warning("openai package not installed.")
-
         else:
             print("MenuStructurer: no LLM key found — using keyword rules.")
 
@@ -76,9 +72,7 @@ class MenuStructurer:
         if not parsed_items:
             return []
 
-        if self.backend == "huggingface":
-            return self._enrich_with_huggingface(parsed_items, restaurant_name)
-        elif self.backend == "openai":
+        if self.backend in ("groq", "openai"):
             return self._enrich_with_llm(parsed_items, restaurant_name, raw_ocr_text)
         else:
             return self._enrich_with_rules(parsed_items)
@@ -222,66 +216,91 @@ STRICT RULES:
                           items: List[Dict],
                           restaurant_name: str,
                           raw_ocr_text: str) -> List[Dict]:
-        """Send items to OpenAI and get back enriched records."""
-        # Build a compact item list for the prompt (max 120 items)
-        item_lines = "\n".join(
-            f"{i+1}. {it['item']} — ₹{it['price']}"
-            for i, it in enumerate(items[:120])
-        )
+        """Send items to Groq/OpenAI in batches to avoid rate limits."""
+        enriched_all = []
+        chunk_size = 35  # safely under Groq's 6000 TPM limit
+        
+        for i in range(0, len(items), chunk_size):
+            chunk = items[i:i + chunk_size]
+            item_lines = "\n".join(
+                f"{j+1}. {it['item']} — ₹{it['price']}"
+                for j, it in enumerate(chunk)
+            )
+            n_items = len(chunk)
 
-        prompt = f"""You are a restaurant menu expert. Below are menu items extracted via OCR from a restaurant menu.
-
+            prompt = f"""You are a restaurant menu expert. Below are {n_items} menu items extracted from a restaurant menu.
 Restaurant: {restaurant_name or "Unknown"}
 
 Items (item name — price):
 {item_lines}
 
-For EACH item return a JSON array with exactly {len(items[:120])} objects in the same order:
+For EACH item return a JSON array with exactly {n_items} objects in the same order:
 [
   {{
-    "item_name": "cleaned item name (fix obvious OCR typos, keep it concise)",
+    "item_name": "cleaned item name (fix obvious OCR typos)",
     "price": <number>,
-    "section_name": "category like Biryani / Beverages / Starters / Main Course / Desserts / Breads / Rice / etc.",
+    "section_name": "A specialized culinary category (e.g. Chinese, Desserts, Beverages, Rice, Biryani, Curries, Thalis, Indian Breads). Assign a highly descriptive, specialized section to EVERY item. NEVER use generic names like 'Menu Items' or 'Main Course'.",
     "is_veg": true or false,
-    "calories": <estimated integer or null if uncertain>,
+    "calories": <integer — MANDATORY estimate, typically 100-600>,
+    "health_score": <integer 1-10 — MANDATORY (10 = healthiest)>,
     "description": "one short line description"
-  }},
-  ...
+  }}
 ]
 
 Rules:
-1. Fix obvious OCR noise in item names (e.g. "Grilled Chiken" → "Grilled Chicken")
-2. Assign sensible Indian restaurant categories based on the item name
+1. Fix obvious OCR noise in item names
+2. Assign sensible, unified specialized category names (section_name). Group items smartly.
 3. is_veg: true only if definitely vegetarian, false if meat/egg/fish
-4. calories: rough estimate based on typical portion sizes, null if unsure
-5. Return ONLY the JSON array, no extra text.
+4. calories MUST be an integer.
+5. health_score MUST be an integer 1-10. Salads/steamed items are 8-10. Fried/Desserts are 1-4.
+6. Return ONLY the JSON array, no extra text.
 """
+            model_name = "llama-3.1-8b-instant" if self.backend == "groq" else settings.LLM_MODEL
+            try:
+                response = self.client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": "You are a menu digitization expert. Return only valid JSON arrays."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.2,
+                    max_tokens=2500,  # reduced to avoid Rate Limit
+                )
+                content = response.choices[0].message.content.strip()
+                content = re.sub(r'^```(?:json)?\s*', '', content)
+                content = re.sub(r'\s*```$', '', content)
+                
+                _KEY_MAP = {
+                    "vegetarian": "is_veg", "is_vegetarian": "is_veg", "veg": "is_veg",
+                    "calorie": "calories", "score": "health_score", "name": "item_name",
+                    "category": "section_name", "section": "section_name",
+                }
+                
+                raw_enriched = json.loads(content)
+                enriched_chunk = [
+                    {_KEY_MAP.get(k.lower(), k): v for k, v in obj.items()}
+                    for obj in raw_enriched
+                ]
+                enriched_all.extend(enriched_chunk)
 
-        try:
-            response = self.client.chat.completions.create(
-                model=settings.LLM_MODEL,
-                messages=[
-                    {"role": "system", "content": "You are a menu digitization expert. Return only valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.2,
-                max_tokens=4000,
-            )
-            content = response.choices[0].message.content.strip()
-            # Strip markdown code fences if present
-            content = re.sub(r'^```(?:json)?\s*', '', content)
-            content = re.sub(r'\s*```$', '', content)
-            enriched = json.loads(content)
+            except Exception as e:
+                logger.warning(f"Groq/Primary LLM chunk failed ({e}).")
+                print(f"[ERROR] Groq LLM failed on chunk: {e}")
+                
+                # Fallback to HuggingFace if key exists
+                if getattr(settings, "HUGGINGFACE_API_KEY", None):
+                    print(f"  ---> Falling back to HuggingFace models for this chunk...")
+                    hf_fallback = self._enrich_with_huggingface(chunk, restaurant_name)
+                    # If HF fallback returned same length, we consider it successful, else rules.
+                    if len(hf_fallback) == len(chunk):
+                        enriched_all.extend(hf_fallback)
+                    else:
+                        enriched_all.extend(self._enrich_with_rules(chunk))
+                else:
+                    print(f"  ---> Falling back to keyword rules for this chunk.")
+                    enriched_all.extend(self._enrich_with_rules(chunk))
 
-            # Merge any items beyond the 120-item LLM limit with rule-based defaults
-            if len(items) > 120:
-                enriched += self._enrich_with_rules(items[120:])
-
-            return enriched
-
-        except Exception as e:
-            logger.warning(f"LLM enrichment failed ({e}). Falling back to rules.")
-            return self._enrich_with_rules(items)
+        return enriched_all
 
     # ── Rule-based fallback ───────────────────────────────────────────────────
 
