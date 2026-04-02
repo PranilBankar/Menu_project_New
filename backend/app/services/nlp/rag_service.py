@@ -61,17 +61,23 @@ class RAGService:
         filters = self.parser.parse(query)
         logger.info(f"RAG: parsed filters = {filters}")
 
-        # 2. Hard SQL filters only (area + price + veg)
-        hard_filters = {k: v for k, v in filters.items()
-                        if k in self.HARD_FILTER_KEYS and v is not None}
-        hard_filters["semantic_query"] = filters.get("semantic_query", query)
+        # 2. Pass filters to EmbeddingService (SQL where clauses + soft boosting)
+        search_filters = {k: v for k, v in filters.items()
+                          if k in self.HARD_FILTER_KEYS and v is not None}
+        search_filters["semantic_query"] = filters.get("semantic_query", query)
+        
+        # Inject soft-boost properties and excude keywords
+        if filters.get("section_name"):
+            search_filters["section_name"] = filters["section_name"]
+        if filters.get("exclude_keywords"):
+            search_filters["exclude_keywords"] = filters["exclude_keywords"]
 
         restaurant_ids = [restaurant_id] if restaurant_id else None
 
         with EmbeddingService() as svc:
             items = svc.hybrid_search(
                 query=query,
-                filters=hard_filters,
+                filters=search_filters,
                 top_k=self.top_k,
                 restaurant_ids=restaurant_ids,
                 area_name=area_name or None,

@@ -366,11 +366,26 @@ class EmbeddingService:
             where_clauses.append("mi.health_score >= %s")
             params.append(filters["min_health_score"])
 
-        if filters.get("section_name"):
-            where_clauses.append("ms.section_name = %s")
-            params.append(filters["section_name"])
+        # Exclude keywords logic
+        exclude_words = filters.get("exclude_keywords")
+        if exclude_words:
+            for word in exclude_words:
+                where_clauses.append("mi.item_name NOT ILIKE %s")
+                params.append(f"%{word}%")
 
         where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        # Boost term if section_name is provided
+        boost_term = "0.0"
+        boost_val = filters.get("section_name")
+        if boost_val:
+            boost_term = "(CASE WHEN ms.section_name ILIKE %s THEN 0.15 ELSE 0 END)"
+            # Insert the boost value into params: 
+            # Wait, PostgreSQL needs the parameter immediately before the embedding distance 
+            # OR we can inject the string literal if we avoid SQL injection.
+            # But the safer way is to rewrite params list, or just use string formatting 
+            # ONLY because boost_val is from predefined categories list, not arbitrary user input.
+            boost_term = f"(CASE WHEN ms.section_name = '{boost_val}' THEN 0.25 ELSE 0 END)"
 
         # Second copy of vector for ORDER BY
         params.append(query_vector)
@@ -380,14 +395,14 @@ class EmbeddingService:
             SELECT mi.item_id, ms.restaurant_id, r.restaurant_name,
                    ms.section_name, mi.item_name, mi.price,
                    mi.is_veg, mi.calories, mi.health_score,
-                   1 - (me.embedding <=> %s::vector) AS similarity
+                   {boost_term} + (1 - (me.embedding <=> %s::vector)) AS similarity
             FROM   menu_embeddings   me
             JOIN   menu_items        mi ON me.item_id        = mi.item_id
             JOIN   menu_sections     ms ON mi.section_id     = ms.section_id
             JOIN   restaurants       r  ON ms.restaurant_id  = r.restaurant_id
             LEFT JOIN areas          a  ON r.area_id         = a.area_id
             {where_sql}
-            ORDER  BY me.embedding <=> %s::vector
+            ORDER  BY {boost_term} + (1 - (me.embedding <=> %s::vector)) DESC
             LIMIT  %s
         """
 

@@ -7,13 +7,14 @@ Two-stage approach:
 
 Output schema:
   {
-    "semantic_query":    str,   # cleaned text for embedding
+    "semantic_query":    str,
     "is_veg":           bool | None,
     "max_price":        int  | None,
     "min_price":        int  | None,
     "max_calories":     int  | None,
     "min_health_score": int  | None,
-    "section_name":     str  | None,   # e.g. "Biryani", "Desserts"
+    "section_name":     str  | None,
+    "exclude_keywords": list[str],
   }
 """
 
@@ -31,21 +32,23 @@ logger = logging.getLogger(__name__)
 
 # ── Category keyword map ───────────────────────────────────────────────────────
 _SECTION_KEYWORDS: list[tuple[list[str], str]] = [
-    (["biryani", "biriyani", "dum"],                      "Biryani"),
-    (["starter", "appetiser", "appetizer", "snack",
-      "tikka", "kebab", "kabab"],                         "Starters"),
-    (["veg main", "veg curry", "sabzi", "paneer",
-      "dal", "daal", "palak"],                            "Veg Mains"),
-    (["chicken", "mutton", "fish", "prawn", "seafood",
-      "keema", "non-veg", "nonveg", "meat"],              "Non-Veg Mains"),
-    (["roti", "naan", "paratha", "bread", "kulcha",
-      "tandoor"],                                         "Breads"),
-    (["rice", "pulao", "fried rice", "jeera rice"],       "Rice"),
-    (["drink", "juice", "lassi", "shake", "milkshake",
-      "coffee", "tea", "soda", "mojito", "mocktail",
-      "beverage", "cold", "water"],                       "Beverages"),
-    (["dessert", "sweet", "ice cream", "halwa",
-      "gulab", "kheer", "brownie", "cake", "mithai"],     "Desserts"),
+    (["chinese", "noodles", "manchurian", "momos"],       "Chinese"),
+    (["north indian", "punjabi", "paneer", "dal makhani"], "North Indian"),
+    (["south indian", "dosa", "idli"],                    "South Indian"),
+    (["fast food", "pizza", "burger", "pasta", "fries"],  "Fast Food"),
+    (["street food", "chaat", "pani puri", "pav bhaji"],  "Street Food"),
+    (["biryani", "dum biryani", "pulao"],                 "Biryani"),
+    (["rice", "fried rice", "jeera rice"],                "Rice & Noodles"),
+    (["bread", "roti", "naan", "paratha", "kulcha"],      "Indian Breads"),
+    (["curry", "gravy", "masala"],                        "Curries & Gravies"),
+    (["starter", "snack", "appetizer", "tikka", "kebab"], "Snacks & Starters"),
+    (["dessert", "sweet", "ice cream", "brownie", "cake"],"Desserts"),
+    (["beverage", "drink", "juice", "shake", "coffee"],   "Beverages"),
+    (["salad", "healthy", "soup"],                        "Salads & Healthy"),
+    (["thali", "combo", "meal"],                          "Thali & Combos"),
+    (["tandoor", "grill", "roast", "tikka"],              "Tandoor & Grills"),
+    (["seafood", "fish", "prawn", "crab"],                "Seafood"),
+    (["egg", "anda", "omelette"],                         "Egg Dishes"),
 ]
 
 # ── Healthy / diet keywords ────────────────────────────────────────────────────
@@ -70,7 +73,13 @@ def _rule_parse(query: str) -> Dict[str, Any]:
         "max_calories":     None,
         "min_health_score": None,
         "section_name":     None,
+        "exclude_keywords": [],
     }
+
+    # ── Negative keywords (e.g. "other than rice", "without paneer") ──────────
+    m_neg = re.findall(r'(?:without|no\s+|other\s+than|except|exclude|not)\s+([a-zA-Z]+)', q)
+    if m_neg:
+        result["exclude_keywords"].extend(m_neg)
 
     # ── Price filters ─────────────────────────────────────────────────────────
     # "under ₹200", "less than 300", "below 150", "upto 200", "cheap under 100"
@@ -110,13 +119,13 @@ def _rule_parse(query: str) -> Dict[str, Any]:
             result["section_name"] = section
             break
 
-    # ── Clean semantic query (remove filter phrases for better embedding) ──────
     clean = re.sub(
         r'(under|below|less than|upto|above|over|more than|minimum|within)\s*[₹rs\.]*\s*\d+',
         '', q, flags=re.IGNORECASE
     )
     clean = re.sub(r'\b(healthy|veg(etarian)?|non.?veg|cheap|affordable|expensive)\b',
                    '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'(?:without|no\s+|other\s+than|except|exclude|not)\s+[a-zA-Z]+', '', clean, flags=re.IGNORECASE)
     clean = re.sub(r'\s{2,}', ' ', clean).strip()
     result["semantic_query"] = clean or query
 
@@ -143,12 +152,11 @@ Query: "{query}"
 
 Return ONLY a JSON object (no extra text):
 {{
-  "is_veg": true/false/null,
   "max_price": integer or null,
   "min_price": integer or null,
   "max_calories": integer or null,
   "min_health_score": integer 1-10 or null,
-  "section_name": one of [Biryani, Starters, Veg Mains, Non-Veg Mains, Breads, Rice, Beverages, Desserts, Snacks] or null,
+  "section_name": one of [North Indian, South Indian, Chinese, Fast Food, Street Food, Biryani, Rice & Noodles, Indian Breads, Curries & Gravies, Snacks & Starters, Desserts, Beverages, Salads & Healthy, Thali & Combos, Tandoor & Grills, Seafood, Egg Dishes] or null,
   "semantic_query": "cleaned query for semantic search"
 }}
 
@@ -159,7 +167,7 @@ Rules:
 - max_price: the price ceiling in rupees (null if not mentioned)
 - min_health_score: set to 6 if user says "healthy", 7 if "very healthy", null otherwise
 - section_name: null if no specific category mentioned
-- semantic_query: remove filter words from the query"""
+- semantic_query: remove filter words and negative phrases from the query"""
 
     try:
         client   = InferenceClient(token=settings.HUGGINGFACE_API_KEY)
