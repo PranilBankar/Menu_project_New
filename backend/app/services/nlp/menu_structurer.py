@@ -18,6 +18,7 @@ import logging
 from typing import Dict, List, Optional
 
 from app.core.config import settings
+from app.services.nlp.category_classifier import get_category_classifier, CATEGORY_DESCRIPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -93,16 +94,22 @@ class MenuStructurer:
             logger.warning("huggingface_hub not installed. Run: pip install huggingface_hub")
             return self._enrich_with_rules(items)
 
-        item_lines = "\n".join(
-            f"{i+1}. {it['item']} - {it['price']}"
-            for i, it in enumerate(items[:60])   # keep within token limits
-        )
+        item_strings = []
+        classifier = get_category_classifier()
+        for j, it in enumerate(items[:60]):
+            pred_cat = classifier.predict(it['item'])
+            cat_hint = f"(Section: {pred_cat})" if pred_cat else "(Section: UNKNOWN)"
+            item_strings.append(f"{j+1}. {it['item']} - {it['price']}  {cat_hint}")
+            
+        item_lines = "\n".join(item_strings)
         n = len(items[:60])
+        
+        allowed_cats = ", ".join(CATEGORY_DESCRIPTIONS.keys())
 
         system_msg = "You are a restaurant menu nutrition expert. Return only valid JSON arrays, no extra text."
-        user_msg = f"""You are given {n} menu items from an Indian restaurant called '{restaurant_name or 'a restaurant'}'.
+        user_msg = f"""You are a strict food classification system.
 
-Items (number. name - price in rupees):
+Items (number. name - price - category status):
 {item_lines}
 
 For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
@@ -110,7 +117,7 @@ For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
   {{
     "item_name": "corrected item name (fix obvious OCR typos)",
     "price": <number>,
-    "section_name": "A specialized culinary category (e.g. Chinese, Desserts, Beverages, Rice, Biryani, Indian Breads). Assign a highly descriptive, specialized section to EVERY item. NEVER use generic names like 'Menu Items' or 'Others'.",
+    "section_name": "Must be exactly the provided Section if given. If UNKNOWN, choose ONLY from: [{allowed_cats}]",
     "is_veg": true or false,
     "calories": <integer — MANDATORY estimate>,
     "health_score": <integer 1-10 — MANDATORY>,
@@ -119,23 +126,12 @@ For each item, return a JSON array with exactly {n} objects in the SAME ORDER:
 ]
 
 STRICT RULES:
-1. Use the PRICE as a quality/quantity signal when estimating calories and health_score:
-   - Low price (< ₹60): smaller portion or simpler ingredients → adjust calories down and health_score accordingly
-   - High price (> ₹300): larger portion or premium ingredients → adjust calories up
-2. "calories" MUST be an integer — never null. Typical Indian portions:
-   - Roti/Naan ₹20-50: 120-160 kcal | Dal ₹100-200: 250-350 kcal
-   - Veg curry ₹150-250: 280-400 kcal | Chicken/Mutton curry ₹250-400: 350-500 kcal
-   - Biryani ₹250-500: 450-650 kcal | Mocktail/Juice ₹80-150: 80-180 kcal
-   - Tea/Coffee ₹30-80: 30-100 kcal | Desserts ₹80-200: 200-400 kcal
-3. "health_score" MUST be an integer 1-10 (10 = most healthy):
-   - 8-10: Grilled/steamed items, plain rice/roti, dal, salads, coconut water
-   - 6-7: Veg curries, plain biryani, lassi, fresh juices
-   - 4-5: Paneer dishes, fried rice, naan, flavoured beverages
-   - 2-3: Deep fried snacks, heavy curries, mithai, biryanis with cream
-   - 1-2: Gulab jamun, jalebi, energy drinks, heavily processed items
-   - Lower price sometimes = lower quality oil/ingredients → reduce health_score by 1-2
-4. is_veg = false for: chicken, mutton, fish, prawn, egg, keema, meat, seafood
-5. Return ONLY the JSON array, starting with '[' and ending with ']'"""
+1. "section_name" MUST be chosen from the allowed list if UNKNOWN. DO NOT invent categories.
+2. If a Section is already provided in the input, you MUST use exactly that Section.
+3. Use the PRICE to estimate calories (higher price = bigger portion). calories MUST be integer.
+4. health_score MUST be an integer 1-10 (10 = healthiest).
+5. is_veg = false for chicken, mutton, fish, prawn, egg.
+6. Return ONLY the JSON array, starting with '[' and ending with ']'"""
 
 
         # Try models in order — first available wins
@@ -220,18 +216,25 @@ STRICT RULES:
         enriched_all = []
         chunk_size = 25  # Down from 35 to prevent JSON output being cut off mid-response
         
+        classifier = get_category_classifier()
+        allowed_cats = ", ".join(CATEGORY_DESCRIPTIONS.keys())
+        
         for i in range(0, len(items), chunk_size):
             chunk = items[i:i + chunk_size]
-            item_lines = "\n".join(
-                f"{j+1}. {it['item']} — ₹{it['price']}"
-                for j, it in enumerate(chunk)
-            )
+            
+            item_strings = []
+            for j, it in enumerate(chunk):
+                pred_cat = classifier.predict(it['item'])
+                cat_hint = f"(Section: {pred_cat})" if pred_cat else "(Section: UNKNOWN)"
+                item_strings.append(f"{j+1}. {it['item']} — ₹{it['price']}  {cat_hint}")
+                
+            item_lines = "\n".join(item_strings)
             n_items = len(chunk)
 
-            prompt = f"""You are a restaurant menu expert. Below are {n_items} menu items extracted from a restaurant menu.
+            prompt = f"""You are a strict food classification system. Below are {n_items} menu items extracted from a restaurant menu.
 Restaurant: {restaurant_name or "Unknown"}
 
-Items (item name — price):
+Items (item name — price — category status):
 {item_lines}
 
 For EACH item return a JSON array with exactly {n_items} objects in the same order:
@@ -239,7 +242,7 @@ For EACH item return a JSON array with exactly {n_items} objects in the same ord
   {{
     "item_name": "cleaned item name (fix obvious OCR typos)",
     "price": <number>,
-    "section_name": "A specialized culinary category (e.g. Chinese, Desserts, Beverages, Rice, Biryani, Curries, Thalis, Indian Breads). Assign a highly descriptive, specialized section to EVERY item. NEVER use generic names like 'Menu Items' or 'Main Course'.",
+    "section_name": "Must be exactly the provided Section if given. If UNKNOWN, choose ONLY from the Permitted Categories list below.",
     "is_veg": true or false,
     "calories": <integer — MANDATORY estimate, typically 100-600>,
     "health_score": <integer 1-10 — MANDATORY (10 = healthiest)>,
@@ -247,13 +250,22 @@ For EACH item return a JSON array with exactly {n_items} objects in the same ord
   }}
 ]
 
+Permitted Categories:
+[{allowed_cats}]
+
+Examples for UNKNOWN items:
+- Honey Chilli Potato → Chinese
+- Cheese Burger → Fast Food
+- Paneer Butter Masala → North Indian
+
 Rules:
 1. Fix obvious OCR noise in item names
-2. Assign sensible, unified specialized category names (section_name). Group items smartly.
-3. is_veg: true only if definitely vegetarian, false if meat/egg/fish
-4. calories MUST be an integer.
-5. health_score MUST be an integer 1-10. Salads/steamed items are 8-10. Fried/Desserts are 1-4.
-6. Return ONLY the JSON array, no extra text.
+2. If a Section is already provided in the input, you MUST use exactly that Section.
+3. You MUST choose ONLY from the Permitted Categories. DO NOT create new categories. Base classification on cuisine.
+4. is_veg: true only if definitely vegetarian, false if meat/egg/fish
+5. calories MUST be an integer. Keep typical Indian food in mind.
+6. health_score MUST be an integer 1-10. Salads/steamed items are 8-10. Fried/Desserts are 1-4.
+7. Return ONLY the JSON array, no extra text.
 """
             model_name = "llama-3.1-8b-instant" if self.backend == "groq" else settings.LLM_MODEL
             try:
