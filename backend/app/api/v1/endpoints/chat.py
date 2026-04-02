@@ -28,10 +28,12 @@ async def chat(req: ChatRequest):
 
     rag = get_rag_service()
 
+    rest_id = req.restaurant_id if req.restaurant_id and req.restaurant_id != "string" else None
+
     result = rag.chat(
         query=req.query,
         area_name=req.area_name or "",
-        restaurant_id=req.restaurant_id,
+        restaurant_id=rest_id,
     )
 
     return ChatResponse(**result)
