@@ -19,7 +19,7 @@ CATEGORY_DESCRIPTIONS = {
     "Fast Food": "pizza, burger, fries, sandwich, wrap, pasta, nuggets, garlic bread",
     "Street Food": "chaat, pav bhaji, bhel, pani puri, golgappa, tikki, vadapav, kachori",
     "Biryani": "biryani rice dishes with spices, pulao",
-    "Rice ": "rice, jeera rice, steamed rice, fried rice",
+    "Rice": "rice, jeera rice, steamed rice, fried rice",
     "Indian Breads": "roti, naan, paratha, kulcha, chapati, phulka, tandoori roti",
     "Curries & Gravies": "gravy, curry, masala, makhani, korma",
     "Snacks & Starters": "appetizers, finger food, cutlet, tikki, pakora, samosa, chaat, chilli, tikka",
@@ -49,7 +49,7 @@ class CategoryClassifier:
         """Extremely fast heuristics for obvious culinary terms."""
         lower = item_name.lower()
         
-        if any(x in lower for x in ["chilli", "manchurian", "hakka", "schezwan", "momos", "chop suey"]):
+        if any(x in lower for x in ["chilli", "manchurian", "hakka", "schezwan", "momos", "chop suey", "noodles"]):
             return "Chinese"
         if any(x in lower for x in ["pizza", "burger", "sandwich", "fries", "pasta", "wrap"]):
             return "Fast Food"
