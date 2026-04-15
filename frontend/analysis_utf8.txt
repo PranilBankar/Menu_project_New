@@ -1,0 +1,24 @@
+﻿Analyzing lib...                                                
+
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:145:28 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:146:28 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:147:12 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:153:83 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:154:64 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:155:12 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\browse_screen.dart:214:37 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\browse_screen.dart:222:32 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\screens\browse_screen.dart:223:37 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\screens\browse_screen.dart:224:29 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\browse_screen.dart:227:38 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\browse_screen.dart:230:40 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\browse_screen.dart:255:39 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\restaurant_detail_screen.dart:191:25 - prefer_const_constructors
+
+flutter : 14 issues found. (ran in 4.0s)
+At line:1 char:1
++ flutter analyze lib/ > analysis_full.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (14 issues found. (ran in 4.0s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
