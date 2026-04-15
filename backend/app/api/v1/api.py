@@ -3,7 +3,7 @@ API Router - Combine all endpoint routers
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import areas, restaurants, menus, chat
+from app.api.v1.endpoints import areas, restaurants, menus, chat, admin
 
 api_router = APIRouter()
 
@@ -12,3 +12,4 @@ api_router.include_router(areas.router,       prefix="/areas",       tags=["Area
 api_router.include_router(restaurants.router, prefix="/restaurants", tags=["Restaurants"])
 api_router.include_router(menus.router,       prefix="/menus",       tags=["Menus"])
 api_router.include_router(chat.router,        prefix="/chat",        tags=["Chat"])
+api_router.include_router(admin.router,       prefix="/admin",       tags=["Admin Dashboard"])

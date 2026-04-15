@@ -40,6 +40,13 @@ def list_areas(
     return areas
 
 
+@router.get("/cities", response_model=list)
+def list_cities(db: Session = Depends(get_db)):
+    """Get distinct city names for the city dropdown."""
+    rows = db.query(Area.city).distinct().order_by(Area.city).all()
+    return [row[0] for row in rows]
+
+
 @router.get("/{area_id}", response_model=AreaResponse)
 def get_area(area_id: uuid.UUID, db: Session = Depends(get_db)):
     """Get a specific area by ID"""
