@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres?sslmode=require"
     DB_ECHO: bool = False
     
-    # Supabase (Optional - for future features)
+    # Supabase
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
     SUPABASE_SERVICE_KEY: Optional[str] = None
@@ -52,9 +52,8 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".pdf"}
     
-    # CORS
+    # CORS — do NOT use "*" with allow_credentials=True (browsers block it)
     CORS_ORIGINS: list = [
-        "*",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8080",

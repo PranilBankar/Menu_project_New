@@ -1,13 +1,16 @@
 """
 Admin Dashboard API Endpoints
 
+ALL endpoints in this router require authentication.
+The logged-in user must be the owner of the restaurant they're managing.
+
 Provides restaurant owners with endpoints to:
 - View dashboard statistics for their restaurant
 - Manage menu items (list, update, delete)
 - Upload menu images with replace/append mode
 - Clear all menu data for a fresh re-upload
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sql_func
 from typing import List, Optional
@@ -19,6 +22,7 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.auth import get_current_user
 from app.models.restaurant import Restaurant
 from app.models.area import Area
 from app.models.menu import MenuSection, MenuItem
@@ -36,20 +40,18 @@ router = APIRouter()
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @router.get("/dashboard/{restaurant_id}", response_model=DashboardStats)
-def get_dashboard(restaurant_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_dashboard(
+    restaurant_id: uuid.UUID,
+    current_user: uuid.UUID = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Get dashboard statistics for a restaurant.
 
     Returns item counts, section counts, upload history, average price,
     veg/non-veg split, and restaurant metadata.
     """
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.restaurant_id == restaurant_id
-    ).first()
-
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
-
+    restaurant = _verify_ownership(restaurant_id, current_user, db)
     area = restaurant.area
 
     # Count sections
@@ -105,6 +107,7 @@ def list_menu_items(
     restaurant_id: uuid.UUID,
     section_name: Optional[str] = None,
     is_veg: Optional[bool] = None,
+    current_user: uuid.UUID = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -112,7 +115,7 @@ def list_menu_items(
 
     Supports optional filters by section name and veg/non-veg.
     """
-    _verify_restaurant(restaurant_id, db)
+    _verify_ownership(restaurant_id, current_user, db)
 
     query = (
         db.query(MenuItem, MenuSection.section_name)
@@ -154,6 +157,7 @@ def update_menu_item(
     restaurant_id: uuid.UUID,
     item_id: uuid.UUID,
     updates: MenuItemUpdate,
+    current_user: uuid.UUID = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -161,7 +165,7 @@ def update_menu_item(
 
     The admin can change the name, price, availability, veg status, etc.
     """
-    _verify_restaurant(restaurant_id, db)
+    _verify_ownership(restaurant_id, current_user, db)
 
     item = (
         db.query(MenuItem)
@@ -202,12 +206,13 @@ def update_menu_item(
 def delete_menu_item(
     restaurant_id: uuid.UUID,
     item_id: uuid.UUID,
+    current_user: uuid.UUID = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Permanently delete a menu item and its embedding.
     """
-    _verify_restaurant(restaurant_id, db)
+    _verify_ownership(restaurant_id, current_user, db)
 
     item = (
         db.query(MenuItem)
@@ -238,6 +243,7 @@ async def admin_upload_menu(
     restaurant_id: uuid.UUID,
     file: UploadFile = File(...),
     mode: str = Form("replace"),
+    current_user: uuid.UUID = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -249,13 +255,8 @@ async def admin_upload_menu(
 
     This reuses the full OCR + LLM enrichment pipeline from the menus endpoint.
     """
-    # Validate restaurant exists
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.restaurant_id == restaurant_id
-    ).first()
-
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
+    # Validate restaurant exists AND user owns it
+    restaurant = _verify_ownership(restaurant_id, current_user, db)
 
     if mode not in ("replace", "append"):
         raise HTTPException(
@@ -501,14 +502,18 @@ async def admin_upload_menu(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @router.delete("/restaurants/{restaurant_id}/menu/clear")
-def clear_menu(restaurant_id: uuid.UUID, db: Session = Depends(get_db)):
+def clear_menu(
+    restaurant_id: uuid.UUID,
+    current_user: uuid.UUID = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Clear all menu sections, items, and embeddings for a restaurant.
 
     Use this before re-uploading a completely new menu, or when the admin
     wants to start fresh.
     """
-    _verify_restaurant(restaurant_id, db)
+    _verify_ownership(restaurant_id, current_user, db)
     deleted = _clear_menu_data(restaurant_id, db)
     return {
         "message": "Menu data cleared",
@@ -522,13 +527,28 @@ def clear_menu(restaurant_id: uuid.UUID, db: Session = Depends(get_db)):
 # HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _verify_restaurant(restaurant_id: uuid.UUID, db: Session) -> Restaurant:
-    """Raise 404 if restaurant doesn't exist."""
+def _verify_ownership(
+    restaurant_id: uuid.UUID, current_user: uuid.UUID, db: Session
+) -> Restaurant:
+    """
+    Check that the restaurant exists AND the current user is the owner.
+
+    Returns the restaurant object if all checks pass.
+    Raises 404 if restaurant doesn't exist, 403 if user is not the owner.
+    """
     restaurant = db.query(Restaurant).filter(
         Restaurant.restaurant_id == restaurant_id
     ).first()
+
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    if restaurant.owner_id != current_user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not the owner of this restaurant",
+        )
+
     return restaurant
 
 

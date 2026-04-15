@@ -7,3 +7,5 @@ from app.schemas.restaurant import RestaurantCreate, RestaurantUpdate, Restauran
 from app.schemas.menu import UploadResponse, UploadStatusResponse
 from app.schemas.chat import ChatRequest, ChatItemResponse, ChatResponse
 from app.schemas.admin import DashboardStats, MenuItemSummary, MenuItemUpdate
+from app.schemas.auth import UserInfo
+

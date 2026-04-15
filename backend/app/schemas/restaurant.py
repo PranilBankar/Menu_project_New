@@ -36,6 +36,7 @@ class RestaurantResponse(RestaurantBase):
     """Schema for GET /restaurants — reading restaurant data."""
     restaurant_id: uuid.UUID
     area_id: uuid.UUID
+    owner_id: Optional[uuid.UUID] = None
     is_active: bool
     area_name: Optional[str] = None
     city: Optional[str] = None

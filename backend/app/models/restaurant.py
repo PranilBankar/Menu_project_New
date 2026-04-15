@@ -13,6 +13,7 @@ class Restaurant(Base):
     __tablename__ = "restaurants"
 
     restaurant_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_id = Column(UUID(as_uuid=True), unique=True, nullable=True, index=True)  # 1:1 with auth.users
     area_id = Column(UUID(as_uuid=True), ForeignKey("areas.area_id", ondelete="CASCADE"), nullable=False)
     restaurant_name = Column(String(255), nullable=False, index=True)
     cuisine_type = Column(ARRAY(String(100)))
